@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Data Loading{% endblock %}
+{% block breadcrumb %}Data Loading{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h2>Data Loading</h2>
+    <p>Dataset overview — shape, column types, missing values, and a preview of the first 10 rows.</p>
+</div>
+
+<!-- ── Error ─────────────────────────────────── -->
+{% if error %}
+<div class="error-box" id="error-msg">⚠️ {{ error }}</div>
+{% endif %}
+
+
+{% if summary %}
+
+<!-- ── Stat cards ────────────────────────────── -->
+<div class="stats-row" id="dataset-stats">
+
+    <div class="stat-card">
+        <div class="stat-label">Total Rows</div>
+        <div class="stat-value">{{ "{:,}".format(summary.n_rows) }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Total Columns</div>
+        <div class="stat-value">{{ summary.n_cols }}</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-label">Duplicate Rows</div>
+        <div class="stat-value">{{ duplicate_count }}</div>
+    </div>
+
+</div>
+
+
+<!-- ── Column Information ────────────────────── -->
+<div class="card" id="column-info">
+    <div class="card-header">
+        <div class="card-icon">📋</div>
+        <h3>Column Information</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Column</th>
+                    <th>Data Type</th>
+                    <th>Missing Values</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for col in summary.columns %}
+                <tr>
+                    <td class="row-num">{{ loop.index }}</td>
+                    <td style="font-weight: 500;">{{ col }}</td>
+                    <td><span class="badge badge-gray">{{ summary.dtypes[col] }}</span></td>
+                    <td>{{ summary.missing_counts[col] }}</td>
+                    <td>
+                        {% if summary.missing_counts[col] == 0 %}
+                            <span class="badge badge-green">✓ Clean</span>
+                        {% else %}
+                            <span class="badge badge-red">⚠ Missing</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ── Data Preview ──────────────────────────── -->
+<div class="card" id="data-preview">
+    <div class="card-header">
+        <div class="card-icon">👁️</div>
+        <h3>Data Preview — First 10 Rows</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    {% for col in summary.columns %}
+                    <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary.preview %}
+                <tr>
+                    {% for col in summary.columns %}
+                    <td>
+                        {% if row[col] is none or row[col] != row[col] %}
+                            <span style="color: var(--text-muted);">—</span>
+                        {% else %}
+                            {{ row[col] }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

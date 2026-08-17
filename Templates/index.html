@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Hero Banner -->
+<div class="welcome-hero">
+  <h1>Placement <span>Prediction</span> Platform</h1>
+  <p>
+    End-to-end Machine Learning workspace for analyzing student academic data,
+    preprocessing features, and exploring placement outcomes for 50,000+ students.
+  </p>
+  <div class="hero-actions">
+    <a href="{{ url_for('data_loading') }}" class="btn btn-primary">
+      <i class="fas fa-database"></i> Inspect Dataset
+    </a>
+    <a href="{{ url_for('eda') }}" class="btn btn-secondary">
+      <i class="fas fa-chart-pie"></i> Explore Data
+    </a>
+    <a href="{{ url_for('preprocessing') }}" class="btn btn-outline">
+      <i class="fas fa-sliders"></i> Pre-process
+    </a>
+  </div>
+</div>
+
+<!-- Quick Stats Grid -->
+<div class="stats-grid">
+  <div class="stat-card theme-indigo">
+    <div class="stat-info">
+      <span class="stat-label">Total Student Records</span>
+      <span class="stat-value">{% if total_rows %}{{ "{:,}".format(total_rows) }}{% else %}50,000{% endif %}</span>
+      <span class="stat-subtext">Annotated Dataset</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-users"></i></div>
+  </div>
+
+  <div class="stat-card theme-purple">
+    <div class="stat-info">
+      <span class="stat-label">Total Features</span>
+      <span class="stat-value">{% if total_cols %}{{ total_cols }}{% else %}32{% endif %}</span>
+      <span class="stat-subtext">Academics, Skills &amp; Scores</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-table-columns"></i></div>
+  </div>
+
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Pipeline Status</span>
+      <span class="stat-value" style="font-size:17px">Active</span>
+      <span class="stat-subtext">5 modules ready</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-circle-check"></i></div>
+  </div>
+
+  <div class="stat-card theme-amber">
+    <div class="stat-info">
+      <span class="stat-label">Target Variable</span>
+      <span class="stat-value" style="font-size:14px">PlacementStatus</span>
+      <span class="stat-subtext">Binary Classification</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-bullseye"></i></div>
+  </div>
+</div>
+
+<!-- ML Pipeline Roadmap -->
+<div class="card" id="pipeline">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-diagram-project card-icon"></i>
+      <h3>ML Pipeline Roadmap</h3>
+    </div>
+    <span class="header-badge">Project Architecture</span>
+  </div>
+  <div class="card-body">
+    <div class="pipeline-grid">
+
+      <!-- Step 1 -->
+      <div class="pipeline-card" style="border-top:3px solid #6366f1">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#eef2ff;color:#6366f1">
+              <i class="fas fa-database"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#eef2ff;color:#4338ca;border-color:#c7d2fe">Step 01</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Data Loading</div>
+          <p class="pipeline-desc">
+            Ingest dataset, check shape, column schemas, null values, and duplicate records.
+          </p>
+        </div>
+        <a href="{{ url_for('data_loading') }}" class="btn btn-primary" style="justify-content:center">
+          Open Module <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="pipeline-card" style="border-top:3px solid #10b981">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#ecfdf5;color:#059669">
+              <i class="fas fa-chart-pie"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#ecfdf5;color:#059669;border-color:#a7f3d0">Step 02</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Exploratory Data Analysis</div>
+          <p class="pipeline-desc">
+            Distributions, correlations, placement insights, and interactive visualizations.
+          </p>
+        </div>
+        <a href="{{ url_for('eda') }}" class="btn btn-primary"
+           style="background:linear-gradient(135deg,#059669,#10b981);justify-content:center">
+          Open EDA <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="pipeline-card" style="border-top:3px solid #f59e0b">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#fffbeb;color:#d97706">
+              <i class="fas fa-sliders"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#fffbeb;color:#d97706;border-color:#fde68a">Step 03</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Pre-processing</div>
+          <p class="pipeline-desc">
+            Handle missing values: drop rows or impute with mean, median, or mode.
+          </p>
+        </div>
+        <a href="{{ url_for('preprocessing') }}" class="btn btn-primary"
+           style="background:linear-gradient(135deg,#d97706,#f59e0b);justify-content:center">
+          Open Module <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="pipeline-card" style="border-top:3px solid #06b6d4">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#ecfeff;color:#0891b2">
+              <i class="fas fa-scale-balanced"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#ecfeff;color:#0e7490;border-color:#a5f3fc">Step 04</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Feature Scaling</div>
+          <p class="pipeline-desc">
+            Normalise features via Min-Max, Z-score (Standard), and Robust scaling for algorithm compatibility.
+          </p>
+        </div>
+        <a href="{{ url_for('feature_scaling') }}" class="btn btn-primary"
+           style="background:linear-gradient(135deg,#0891b2,#06b6d4);justify-content:center">
+          Open Module <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="pipeline-card" style="border-top:3px solid #8b5cf6">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#f5f3ff;color:#7c3aed">
+              <i class="fas fa-tags"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#f5f3ff;color:#6d28d9;border-color:#ddd6fe">Step 05</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Feature Encoding</div>
+          <p class="pipeline-desc">
+            Convert categorical columns via Label, One-Hot, and Ordinal encoding for ML models.
+          </p>
+        </div>
+        <a href="{{ url_for('encoding') }}" class="btn btn-primary"
+           style="background:linear-gradient(135deg,#7c3aed,#8b5cf6);justify-content:center">
+          Open Module <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+
+      <!-- Step 6 — Coming Soon -->
+      <div class="pipeline-card" style="border-top:3px solid #a855f7;opacity:.7">
+        <div>
+          <div class="pipeline-card-top">
+            <div class="pipeline-icon" style="background:#faf5ff;color:#a855f7">
+              <i class="fas fa-brain"></i>
+            </div>
+            <span class="pipeline-step-badge" style="background:#faf5ff;color:#7c3aed;border-color:#d8b4fe">Step 06</span>
+          </div>
+          <div class="pipeline-title" style="margin-top:10px">Model Training</div>
+          <p class="pipeline-desc">
+            Train classifiers (Random Forest, Logistic Regression) with cross-validation metrics.
+          </p>
+        </div>
+        <button class="btn btn-outline" disabled style="justify-content:center;width:100%;cursor:not-allowed;opacity:.6">
+          Coming Soon
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}

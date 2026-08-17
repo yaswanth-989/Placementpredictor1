@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+{% block title %}Encoding{% endblock %}
+{% block breadcrumb %}Categorical Feature Encoding{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Categorical Feature Encoding</h2>
+  <p>
+    Convert categorical text columns into numeric form so ML algorithms can process them.
+    Choose the right encoding based on whether categories have a natural order.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Cards ────────────────────────────────────── -->
+<div class="action-grid">
+
+  <a href="{{ url_for('encoding') }}?action=info"
+     class="action-card {% if action == 'info' %}active-action{% endif %}" id="btn-info">
+    <span class="action-icon">🏷️</span>
+    <span class="action-title">Column Overview</span>
+    <span class="action-desc">View all categorical columns, unique values, and top categories</span>
+  </a>
+
+  <a href="{{ url_for('encoding') }}?action=label"
+     class="action-card {% if action == 'label' %}active-action{% endif %}" id="btn-label">
+    <span class="action-icon">🔢</span>
+    <span class="action-title">Label Encoding</span>
+    <span class="action-desc">Assign integer codes alphabetically — fast but may imply false ordering</span>
+  </a>
+
+  <a href="{{ url_for('encoding') }}?action=onehot"
+     class="action-card {% if action == 'onehot' %}active-action{% endif %}" id="btn-onehot">
+    <span class="action-icon">🔲</span>
+    <span class="action-title">One-Hot Encoding</span>
+    <span class="action-desc">Create binary columns per category — safe for nominal features</span>
+  </a>
+
+  <a href="{{ url_for('encoding') }}?action=ordinal"
+     class="action-card {% if action == 'ordinal' %}active-action{% endif %}" id="btn-ordinal">
+    <span class="action-icon">📶</span>
+    <span class="action-title">Ordinal Encoding</span>
+    <span class="action-desc">Manually ordered integers (Low→0, Mid→1, High→2) — preserves rank</span>
+  </a>
+
+</div>
+
+<!-- ═══════════════════════════════════
+     COLUMN OVERVIEW
+═══════════════════════════════════ -->
+{% if cat_info and action == 'info' %}
+<div class="card" id="cat-info-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>Categorical Columns Overview</h3>
+    </div>
+    <span class="header-badge">{{ cat_info.columns | length }} Columns</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Column</th><th>Data Type</th><th>Unique Values</th><th>Top Category</th><th>Top Frequency</th><th>All Categories (top 10)</th></tr>
+      </thead>
+      <tbody>
+        {% for info in cat_info.info %}
+        <tr>
+          <td style="font-weight:600">{{ info.column }}</td>
+          <td><span class="badge badge-gray">{{ info.dtype }}</span></td>
+          <td><span class="badge badge-blue">{{ info.unique }}</span></td>
+          <td style="font-weight:500;color:var(--accent)">{{ info.top_value }}</td>
+          <td>{{ "{:,}".format(info.top_freq) }}</td>
+          <td style="font-size:12px;color:var(--text-muted)">{{ info.categories | join(', ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Frequency distribution cards for each column -->
+{% if enc_summary %}
+<div class="page-header" style="margin-top:8px;margin-bottom:12px">
+  <h2 style="font-size:15px">Value Frequency — All Categorical Columns</h2>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:18px">
+  {% for col, counts in enc_summary.items() %}
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-bars-staggered card-icon"></i>
+        <h3>{{ col }}</h3>
+      </div>
+    </div>
+    <div class="card-body" style="padding:12px 14px">
+      <div class="dist-list">
+        {% for row in counts[:6] %}
+        {% set total_col = counts | sum(attribute='count') %}
+        {% set pct = ((row.count / total_col) * 100) | round(1) %}
+        <div>
+          <div class="dist-item-header">
+            <span style="font-size:13px">{{ row.value }}</span>
+            <strong>{{ "{:,}".format(row.count) }} ({{ pct }}%)</strong>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar-fill" style="width:{{ pct }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     LABEL ENCODING
+═══════════════════════════════════ -->
+{% if result and action == 'label' %}
+
+<div class="card" id="label-method-card" style="border-top:3px solid var(--blue-600)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-info card-icon"></i>
+      <h3>Label Encoding</h3>
+    </div>
+    <span class="header-badge">Alphabetical Integer Mapping</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar" style="margin-bottom:10px">
+      <i class="fas fa-circle-info" style="color:var(--accent);margin-right:6px"></i>
+      <strong>How it works:</strong> {{ result.description }}
+    </div>
+    <div class="error-box" style="margin-bottom:0">
+      <i class="fas fa-triangle-exclamation"></i>
+      <strong>Warning:</strong> {{ result.warning }}
+    </div>
+  </div>
+</div>
+
+<!-- Mapping tables -->
+{% for col in result.columns %}
+<div class="card" style="margin-bottom:14px" id="label-map-{{ loop.index }}">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-arrows-left-right card-icon"></i>
+      <h3>{{ col }} — Label Mapping</h3>
+    </div>
+    <span class="header-badge">{{ result.mappings[col] | length }} Categories</span>
+  </div>
+  <div class="table-wrapper">
+    <table style="max-width:400px">
+      <thead><tr><th>Category (Text)</th><th>Encoded (Integer)</th></tr></thead>
+      <tbody>
+        {% for cat, code in result.mappings[col].items() %}
+        <tr>
+          <td style="font-weight:500">{{ cat }}</td>
+          <td class="fill-val">{{ code }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Before vs After preview -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="label-preview">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-xmark card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i><h3>Before Encoding</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_before %}
+          <tr>{% for col in result.columns %}<td>{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-check card-icon" style="background:#f0fdf4;color:#16a34a;border-color:#bbf7d0"></i><h3>After Label Encoding</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_after %}
+          <tr>{% for col in result.columns %}<td class="fill-val">{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     ONE-HOT ENCODING
+═══════════════════════════════════ -->
+{% if result and action == 'onehot' %}
+
+<div class="card" id="ohe-method-card" style="border-top:3px solid var(--green)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-info card-icon"></i>
+      <h3>One-Hot Encoding</h3>
+    </div>
+    <span class="header-badge">Binary Columns</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar" style="margin-bottom:10px">
+      <i class="fas fa-circle-info" style="color:var(--accent);margin-right:6px"></i>
+      {{ result.description }}
+    </div>
+    <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--slate-700)">
+      <i class="fas fa-circle-info" style="color:var(--amber);margin-right:6px"></i>
+      {{ result.note }}
+    </div>
+  </div>
+</div>
+
+<!-- Eligible columns + new columns created -->
+<div class="card" id="ohe-columns-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table-columns card-icon"></i>
+      <h3>New Binary Columns Created</h3>
+    </div>
+    <span class="header-badge">{{ result.new_columns | length }} New Columns</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Original Column</th><th>Categories</th><th>Binary Columns Generated</th></tr>
+      </thead>
+      <tbody>
+        {% for info in result.ohe_info %}
+        <tr>
+          <td style="font-weight:600">{{ info.column }}</td>
+          <td style="font-size:12.5px">{{ info.categories | join(', ') }}</td>
+          <td style="font-size:12.5px;color:var(--accent)">{{ info.new_columns | join(', ') }}</td>
+        </tr>
+        {% endfor %}
+        {% for col in result.skipped %}
+        <tr style="opacity:.6">
+          <td style="font-weight:500">{{ col }}</td>
+          <td colspan="2"><span class="badge badge-gray">Skipped (high cardinality — use Label Encoding)</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Before / After preview -->
+{% if result.preview_after %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="ohe-preview">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-xmark card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i><h3>Before (Original)</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.eligible %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_before %}
+          <tr>{% for col in result.eligible %}<td>{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-check card-icon" style="background:#f0fdf4;color:#16a34a;border-color:#bbf7d0"></i><h3>After (Binary Columns)</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.new_columns[:8] %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_after %}
+          <tr>{% for col in result.new_columns[:8] %}<td class="fill-val">{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     ORDINAL ENCODING
+═══════════════════════════════════ -->
+{% if result and action == 'ordinal' %}
+
+<div class="card" id="ordinal-method-card" style="border-top:3px solid var(--amber)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-info card-icon"></i>
+      <h3>Ordinal Encoding</h3>
+    </div>
+    <span class="header-badge">Ranked Integers</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar" style="margin-bottom:10px">
+      <i class="fas fa-circle-info" style="color:var(--accent);margin-right:6px"></i>
+      {{ result.description }}
+    </div>
+    <div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--slate-700)">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      {{ result.note }}
+    </div>
+  </div>
+</div>
+
+{% for info in result.encoding_info %}
+<div class="card" style="margin-bottom:14px" id="ordinal-info-{{ loop.index }}">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-arrows-up-down card-icon"></i>
+      <h3>{{ info.column }} — Ordinal Mapping</h3>
+    </div>
+    <span class="header-badge">{{ info.order | length }} Levels</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <!-- Mapping -->
+      <div>
+        <p style="font-size:12.5px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Category → Code:</p>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          {% for cat in info.order %}
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-weight:500;min-width:80px">{{ cat }}</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="fill-val" style="font-size:15px">{{ info.mapping[cat] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Placement stats per level -->
+      {% if info.placement_stats %}
+      <div>
+        <p style="font-size:12.5px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">Placement Rate per Level:</p>
+        <div class="dist-list">
+          {% for stat in info.placement_stats %}
+          <div>
+            <div class="dist-item-header">
+              <span>{{ stat.category }}</span>
+              <strong>{{ stat.placement_rate_pct }}%{% if stat.placement_rate_pct != '-' %} placed{% endif %}</strong>
+            </div>
+            {% if stat.placement_rate_pct != '-' %}
+            <div class="progress-container">
+              <div class="progress-bar-fill progress-placed" style="width:{{ stat.placement_rate_pct }}%"></div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Before vs After -->
+{% if result.columns %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="ordinal-preview">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-xmark card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i><h3>Before Encoding</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_before %}
+          <tr>{% for col in result.columns %}<td style="font-weight:500">{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header"><div class="card-header-title"><i class="fas fa-check card-icon" style="background:#f0fdf4;color:#16a34a;border-color:#bbf7d0"></i><h3>After Ordinal Encoding</h3></div></div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr></thead>
+        <tbody>
+          {% for row in result.preview_after %}
+          <tr>{% for col in result.columns %}<td class="fill-val">{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}

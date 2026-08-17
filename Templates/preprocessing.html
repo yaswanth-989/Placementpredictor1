@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}Pre-processing{% endblock %}
+{% block breadcrumb %}Pre-processing{% endblock %}
+
+{% block content %}
+
+<!-- ── Page Header ──────────────────────────────── -->
+<div class="page-header">
+    <h2>Pre-processing</h2>
+    <p>Handle missing values — view summary, drop rows, or impute using mean, median, or mode.</p>
+</div>
+
+<!-- ── Error ────────────────────────────────────── -->
+{% if error %}
+<div class="error-box" id="preprocess-error">⚠️ {{ error }}</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════
+     ACTION CARDS
+     Clicking navigates to ?action=xxx
+     Flask runs the calculation and re-renders with result
+══════════════════════════════════════════════ -->
+<div class="action-grid" id="action-buttons">
+
+    <!-- Missing Summary -->
+    <a href="{{ url_for('preprocessing') }}?action=missing-summary"
+       class="action-card {% if action == 'missing-summary' %}active-action{% endif %}"
+       id="btn-missing-summary">
+        <div class="action-icon">📊</div>
+        <div class="action-title">Missing Summary</div>
+        <div class="action-desc">View missing count and % for every column.</div>
+    </a>
+
+    <!-- Drop Missing -->
+    <a href="{{ url_for('preprocessing') }}?action=drop-missing"
+       class="action-card {% if action == 'drop-missing' %}active-action{% endif %}"
+       id="btn-drop-missing">
+        <div class="action-icon">🗑️</div>
+        <div class="action-title">Drop Missing</div>
+        <div class="action-desc">Remove all rows that contain any missing value.</div>
+    </a>
+
+    <!-- Mean Imputation -->
+    <a href="{{ url_for('preprocessing') }}?action=mean-imputation"
+       class="action-card {% if action == 'mean-imputation' %}active-action{% endif %}"
+       id="btn-mean-imputation">
+        <div class="action-icon">➗</div>
+        <div class="action-title">Mean Imputation</div>
+        <div class="action-desc">Fill missing numeric values with column mean.</div>
+    </a>
+
+    <!-- Median Imputation -->
+    <a href="{{ url_for('preprocessing') }}?action=median-imputation"
+       class="action-card {% if action == 'median-imputation' %}active-action{% endif %}"
+       id="btn-median-imputation">
+        <div class="action-icon">📏</div>
+        <div class="action-title">Median Imputation</div>
+        <div class="action-desc">Fill missing numeric values with column median.</div>
+    </a>
+
+    <!-- Mode Imputation -->
+    <a href="{{ url_for('preprocessing') }}?action=mode-imputation"
+       class="action-card {% if action == 'mode-imputation' %}active-action{% endif %}"
+       id="btn-mode-imputation">
+        <div class="action-icon">🔁</div>
+        <div class="action-title">Mode Imputation</div>
+        <div class="action-desc">Fill missing numeric values with column mode.</div>
+    </a>
+
+</div><!-- /#action-buttons -->
+
+
+<!-- ══════════════════════════════════════════════
+     MISSING SUMMARY TABLE  (always shown)
+══════════════════════════════════════════════ -->
+{% if missing_summary %}
+<div class="card" id="missing-summary-table">
+    <div class="card-header">
+        <div class="card-icon">📋</div>
+        <h3>Missing Value Summary — All Columns</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Column</th>
+                    <th>Missing Count</th>
+                    <th>Missing %</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in missing_summary %}
+                <tr>
+                    <td class="row-num">{{ loop.index }}</td>
+                    <td style="font-weight: 500;">{{ row.column }}</td>
+                    <td>{{ row.missing_count }}</td>
+                    <td>{{ row.missing_pct }}%</td>
+                    <td>
+                        {% if row.missing_count == 0 %}
+                            <span class="badge badge-green">✓ No Missing</span>
+                        {% else %}
+                            <span class="badge badge-red">⚠ Has Missing</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════
+     RESULT SECTION
+     Shown only when an action (other than missing-summary)
+     is selected and result is available
+══════════════════════════════════════════════ -->
+{% if result %}
+
+<div id="action-result">
+
+    <!-- ─── DROP MISSING RESULT ─── -->
+    {% if action == 'drop-missing' %}
+
+    <div class="result-box">
+        <div class="result-box-title">✓ Drop Missing — Result</div>
+        <div class="result-stat">
+            <span class="rl">Rows Before:</span>
+            <span class="rv">{{ "{:,}".format(result.before) }}</span>
+        </div>
+        <div class="result-stat">
+            <span class="rl">Rows After:</span>
+            <span class="rv">{{ "{:,}".format(result.after) }}</span>
+        </div>
+        <div class="result-stat">
+            <span class="rl">Rows Dropped:</span>
+            <span class="rv" style="color: var(--red);">{{ "{:,}".format(result.dropped) }}</span>
+        </div>
+    </div>
+
+    {% endif %}
+
+
+    <!-- ─── IMPUTATION RESULT (Mean / Median / Mode) ─── -->
+    {% if action in ['mean-imputation', 'median-imputation', 'mode-imputation'] %}
+
+    <div class="result-box">
+        <div class="result-box-title">✓ {{ result.fill_type }} Imputation — Applied to Numeric Columns</div>
+
+        <div class="card" style="margin: 12px 0 0; box-shadow: none; border-color: var(--green-border);">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Missing Before</th>
+                            <th>Fill Value ({{ result.fill_type }})</th>
+                            <th>Missing After</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col in result.columns %}
+                        <tr>
+                            <td style="font-weight: 600;">{{ col }}</td>
+
+                            <!-- Missing Before -->
+                            <td>
+                                {% if result.before[col] > 0 %}
+                                    <span class="badge badge-red">{{ result.before[col] }}</span>
+                                {% else %}
+                                    <span class="badge badge-green">0</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Fill Value -->
+                            <td class="fill-val">{{ result.fill_values[col] }}</td>
+
+                            <!-- Missing After -->
+                            <td>
+                                {% if result.after[col] == 0 %}
+                                    <span class="badge badge-green zero-val">0 ✓</span>
+                                {% else %}
+                                    <span class="badge badge-red">{{ result.after[col] }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div><!-- /.result-box -->
+
+    {% endif %}
+
+</div><!-- /#action-result -->
+
+{% endif %}
+
+{% endblock %}

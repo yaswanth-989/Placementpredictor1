@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}PlacePredict{% endblock %} — ML Dashboard</title>
+  <meta name="description" content="Placement Prediction ML Dashboard — Data Analysis, EDA & Pre-processing.">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ════════════════════════════════
+     SIDEBAR
+════════════════════════════════ -->
+<aside class="sidebar">
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="logo-mark">PP</div>
+    <div>
+      <div class="logo-text">PlacePredict</div>
+      <div class="logo-sub">ML Analytics Suite</div>
+    </div>
+  </div>
+
+  <!-- Core Pipeline nav -->
+  <div class="nav-label">Core Pipeline</div>
+  <nav>
+    <ul>
+
+      <li>
+        <a href="{{ url_for('index') }}"
+           class="{% if active == 'home' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-th-large"></i></span>
+            <span>Dashboard</span>
+          </div>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ url_for('data_loading') }}"
+           class="{% if active == 'data-loading' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-database"></i></span>
+            <span>Data Loading</span>
+          </div>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ url_for('eda') }}"
+           class="{% if active == 'eda' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+            <span>EDA</span>
+          </div>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ url_for('preprocessing') }}"
+           class="{% if active == 'preprocessing' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-sliders"></i></span>
+            <span>Pre-processing</span>
+          </div>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ url_for('feature_scaling') }}"
+           class="{% if active == 'feature-scaling' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-scale-balanced"></i></span>
+            <span>Feature Scaling</span>
+          </div>
+        </a>
+      </li>
+
+      <li>
+        <a href="{{ url_for('encoding') }}"
+           class="{% if active == 'encoding' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-tags"></i></span>
+            <span>Encoding</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Coming soon -->
+      <li>
+        <div class="nav-link-disabled">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-brain"></i></span>
+            <span>Model Training</span>
+          </div>
+          <span class="badge-soon">Soon</span>
+        </div>
+      </li>
+
+      <li>
+        <div class="nav-link-disabled">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span>Prediction</span>
+          </div>
+          <span class="badge-soon">Soon</span>
+        </div>
+      </li>
+
+    </ul>
+  </nav>
+
+  <!-- Module Status -->
+  <div class="nav-label" style="margin-top:10px">Module Status</div>
+  <div style="padding:4px 10px 10px">
+    <div class="status-row">
+      <span class="status-dot"></span> Data Loading
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> EDA
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Pre-processing
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Feature Scaling
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Encoding
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+  </div>
+
+  <!-- User Footer -->
+  <div class="sidebar-footer">
+    <div class="user-avatar"><i class="fas fa-user-astronaut"></i></div>
+    <div class="user-info">
+      <span class="user-name">ML Admin</span>
+      <span class="user-status">Pipeline Active</span>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ════════════════════════════════
+     TOPBAR
+════════════════════════════════ -->
+<header class="topbar">
+  <span class="topbar-site">PlacePredict</span>
+  <span class="topbar-sep">/</span>
+  <span class="topbar-page">{% block breadcrumb %}Home{% endblock %}</span>
+  <div class="topbar-actions">{% block topbar_actions %}{% endblock %}</div>
+</header>
+
+<!-- ════════════════════════════════
+     CONTENT
+════════════════════════════════ -->
+<main class="layout">
+  {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

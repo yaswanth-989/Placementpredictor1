@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}Feature Scaling{% endblock %}
+{% block breadcrumb %}Feature Scaling & Standardisation{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Feature Scaling &amp; Standardisation</h2>
+  <p>
+    Compare Min-Max, Z-score, and Robust scaling applied to numeric placement features.
+    Scaling ensures no single feature dominates due to its measurement unit.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Cards ────────────────────────────────────── -->
+<div class="action-grid">
+
+  <a href="{{ url_for('feature_scaling') }}?action=original"
+     class="action-card {% if action == 'original' %}active-action{% endif %}" id="btn-original">
+    <span class="action-icon">📊</span>
+    <span class="action-title">Original Stats</span>
+    <span class="action-desc">Raw feature statistics before any scaling is applied</span>
+  </a>
+
+  <a href="{{ url_for('feature_scaling') }}?action=minmax"
+     class="action-card {% if action == 'minmax' %}active-action{% endif %}" id="btn-minmax">
+    <span class="action-icon">📐</span>
+    <span class="action-title">Min-Max Scaling</span>
+    <span class="action-desc">Normalise to [0, 1] range: x_new = (x − min) / (max − min)</span>
+  </a>
+
+  <a href="{{ url_for('feature_scaling') }}?action=standard"
+     class="action-card {% if action == 'standard' %}active-action{% endif %}" id="btn-standard">
+    <span class="action-icon">📏</span>
+    <span class="action-title">Standard Scaling</span>
+    <span class="action-desc">Z-score: x_new = (x − mean) / std → mean=0, std=1</span>
+  </a>
+
+  <a href="{{ url_for('feature_scaling') }}?action=robust"
+     class="action-card {% if action == 'robust' %}active-action{% endif %}" id="btn-robust">
+    <span class="action-icon">🛡️</span>
+    <span class="action-title">Robust Scaling</span>
+    <span class="action-desc">Outlier-resistant: x_new = (x − median) / IQR</span>
+  </a>
+
+</div>
+
+<!-- ── Method Info Card (shown when a scaler is selected) ── -->
+{% if result %}
+<div class="card" id="method-info" style="border-top:3px solid var(--accent)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-info card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">Active</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+      <div class="result-stat">
+        <span class="rl"><i class="fas fa-function" style="color:var(--accent);margin-right:5px"></i>Formula</span>
+        <code style="font-size:13px;background:var(--slate-100);padding:3px 8px;border-radius:4px">{{ result.formula }}</code>
+      </div>
+      <div class="result-stat">
+        <span class="rl"><i class="fas fa-arrows-to-dot" style="color:var(--accent);margin-right:5px"></i>Output Range</span>
+        <span class="rv">{{ result.output_range }}</span>
+      </div>
+      <div class="result-stat" style="grid-column:1/-1">
+        <span class="rl"><i class="fas fa-lightbulb" style="color:var(--amber);margin-right:5px"></i>Best Used When</span>
+        <span class="rv">{{ result.use_case }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Original Stats (always shown) ──────────────────── -->
+{% if orig_stats and (not result or action == 'original') %}
+<div class="card" id="original-stats-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>Original Feature Statistics (Before Scaling)</h3>
+    </div>
+    <span class="header-badge">Raw Values</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>Min</th><th>Max</th><th>Mean</th><th>Std Dev</th><th>Median</th><th>Scale Problem?</th></tr>
+      </thead>
+      <tbody>
+        {% for row in orig_stats.stats %}
+        <tr>
+          <td style="font-weight:600">{{ row.column }}</td>
+          <td>{{ row.min }}</td>
+          <td>{{ row.max }}</td>
+          <td>{{ row.mean }}</td>
+          <td>{{ row.std }}</td>
+          <td>{{ row.median }}</td>
+          <td>
+            {% if (row.max - row.min) > 50 %}
+              <span class="badge badge-red"><i class="fas fa-triangle-exclamation"></i> Large Range</span>
+            {% else %}
+              <span class="badge badge-green">OK</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Comparison Preview (Before vs After) ───────────── -->
+{% if result %}
+
+<!-- Stats comparison: Before vs After -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="stats-comparison">
+
+  <!-- Before -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-xmark card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i>
+        <h3>Before Scaling</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Min</th><th>Max</th><th>Mean</th><th>Std</th></tr>
+        </thead>
+        <tbody>
+          {% for row in result.stats_before %}
+          <tr>
+            <td style="font-weight:600">{{ row.column }}</td>
+            <td>{{ row.min }}</td><td>{{ row.max }}</td>
+            <td>{{ row.mean }}</td><td>{{ row.std }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- After -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-check card-icon" style="background:#f0fdf4;color:#16a34a;border-color:#bbf7d0"></i>
+        <h3>After Scaling</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Min</th><th>Max</th><th>Mean</th><th>Std</th></tr>
+        </thead>
+        <tbody>
+          {% for row in result.stats_after %}
+          <tr>
+            <td style="font-weight:600">{{ row.column }}</td>
+            <td class="fill-val">{{ row.min }}</td>
+            <td class="fill-val">{{ row.max }}</td>
+            <td class="fill-val">{{ row.mean }}</td>
+            <td class="fill-val">{{ row.std }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Row-by-row preview Before vs After -->
+<div class="card" id="row-preview">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-eye card-icon"></i>
+      <h3>Row Preview — First 10 Records (Before → After)</h3>
+    </div>
+    <span class="header-badge">{{ result.columns | length }} columns</span>
+  </div>
+  <div class="card-body">
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">
+      <i class="fas fa-circle-info" style="color:var(--accent)"></i>
+      Showing <strong>Before</strong> (top) and <strong>After</strong> (bottom) for the first 10 rows.
+    </p>
+
+    <p style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--text-secondary)">Before:</p>
+    <div class="table-wrapper" style="margin-bottom:12px">
+      <table>
+        <thead>
+          <tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in result.preview_before %}
+          <tr>{% for col in result.columns %}<td>{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <p style="font-weight:600;font-size:13px;margin-bottom:6px;color:var(--green)">After ({{ result.method }}):</p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>{% for col in result.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for row in result.preview_after %}
+          <tr>{% for col in result.columns %}<td class="fill-val">{{ row[col] if col in row else '—' }}</td>{% endfor %}</tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<!-- ── Side-by-Side Comparison Table ──────────────────── -->
+{% if comparison %}
+<div class="card" id="all-methods-comparison">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-arrows-left-right card-icon"></i>
+      <h3>All Three Scalers — Side-by-Side ({{ comparison.column }})</h3>
+    </div>
+    <span class="header-badge">Comparison</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Original</th>
+          <th>Min-Max [0,1]</th>
+          <th>Z-score (μ=0)</th>
+          <th>Robust (IQR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in comparison.rows %}
+        <tr>
+          <td class="row-num">{{ loop.index }}</td>
+          <td>{{ row.Original }}</td>
+          <td style="color:#4338ca;font-weight:500">{{ row["Min-Max"] }}</td>
+          <td style="color:#059669;font-weight:500">{{ row["Z-score"] }}</td>
+          <td style="color:#d97706;font-weight:500">{{ row.Robust }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
