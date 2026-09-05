@@ -1,0 +1,469 @@
+{% extends "base.html" %}
+{% block title %}Decision Tree{% endblock %}
+{% block breadcrumb %}Decision Tree Classifier{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Decision Tree — Placement Prediction</h2>
+  <p>
+    Classify students as <strong>Placed / Not Placed</strong> using a Decision Tree.
+    Covers Entropy, Gini, Information Gain, model training, and pruning comparison.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Cards ────────────────────────────────────── -->
+<div class="action-grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">
+
+  <a href="{{ url_for('decision_tree') }}?action=concepts"
+     class="action-card {% if action == 'concepts' %}active-action{% endif %}" id="btn-concepts">
+    <span class="action-icon">🧮</span>
+    <span class="action-title">Entropy &amp; Gini</span>
+    <span class="action-desc">Math concepts: Entropy, Gini Impurity, Information Gain with real data</span>
+  </a>
+
+  <a href="{{ url_for('decision_tree') }}?action=train"
+     class="action-card {% if action == 'train' %}active-action{% endif %}" id="btn-train">
+    <span class="action-icon">🌳</span>
+    <span class="action-title">Train Model</span>
+    <span class="action-desc">Fit Decision Tree — accuracy, confusion matrix, feature importance</span>
+  </a>
+
+  <a href="{{ url_for('decision_tree') }}?action=compare"
+     class="action-card {% if action == 'compare' %}active-action{% endif %}" id="btn-compare">
+    <span class="action-icon">⚖️</span>
+    <span class="action-title">Pruning Comparison</span>
+    <span class="action-desc">4 variants: Deep / max_depth=5 / min_samples_leaf=20 / ccp_alpha</span>
+  </a>
+
+</div>
+
+<!-- ═══════════════════════════════════
+     ENTROPY & GINI CONCEPTS
+═══════════════════════════════════ -->
+{% if result and action == 'concepts' %}
+
+<!-- Formula reference -->
+<div class="card" id="formula-card" style="border-top:3px solid var(--accent)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-function card-icon"></i>
+      <h3>Key Formulas</h3>
+    </div>
+    <span class="header-badge">{{ result.n_records | default(0) | int | string }} records</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px">
+      {% for name, formula in result.formulas.items() %}
+      <div class="result-stat">
+        <span class="rl">{{ name }}</span>
+        <code style="font-size:13px;background:var(--slate-100);padding:4px 10px;border-radius:4px;display:inline-block;margin-top:4px">
+          {{ formula }}
+        </code>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Concept summary table -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Concept</th><th>Formula</th><th>Goal in DT</th></tr>
+        </thead>
+        <tbody>
+          {% for row in result.concept_table %}
+          <tr>
+            <td style="font-weight:600">{{ row.concept }}</td>
+            <td><code style="font-size:12px;background:var(--slate-100);padding:2px 6px;border-radius:3px">{{ row.formula }}</code></td>
+            <td style="color:var(--text-secondary)">{{ row.goal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Dataset entropy + class distribution -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="entropy-stats">
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-chart-pie card-icon"></i>
+        <h3>Class Distribution (PlacementStatus)</h3>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="dist-list">
+        {% set total_n = result.class_dist.values() | sum %}
+        {% for cls, cnt in result.class_dist.items() %}
+        {% set pct = ((cnt / total_n) * 100) | round(1) %}
+        <div>
+          <div class="dist-item-header">
+            <span style="font-weight:500">{{ cls }}</span>
+            <strong>{{ "{:,}".format(cnt) }} ({{ pct }}%)</strong>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar-fill progress-placed" style="width:{{ pct }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-square-root-variable card-icon"></i>
+        <h3>Overall Dataset Impurity</h3>
+      </div>
+    </div>
+    <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div style="text-align:center">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Entropy H(S)</p>
+        <p style="font-size:36px;font-weight:700;color:var(--accent);margin:0">{{ result.entropy }}</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          Max = 1.0 (perfectly uncertain)<br>Min = 0.0 (pure node)
+        </p>
+      </div>
+      <div style="text-align:center">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Gini Impurity</p>
+        <p style="font-size:36px;font-weight:700;color:var(--green);margin:0">{{ result.gini }}</p>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          Max ≈ 0.5 (2-class uniform)<br>Min = 0.0 (pure node)
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Information Gain table -->
+<div class="card" id="ig-table-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-code-branch card-icon"></i>
+      <h3>Information Gain for CGPA Split Thresholds</h3>
+    </div>
+    <span class="header-badge">Best threshold highlighted</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>CGPA ≤</th>
+          <th>Left (≤ threshold)</th>
+          <th>Placed% Left</th>
+          <th>Right (&gt; threshold)</th>
+          <th>Placed% Right</th>
+          <th>Information Gain</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.thresholds %}
+        <tr {% if result.best_threshold and row.threshold == result.best_threshold.threshold %}
+            style="background:var(--accent-bg);font-weight:600"{% endif %}>
+          <td>
+            {{ row.threshold }}
+            {% if result.best_threshold and row.threshold == result.best_threshold.threshold %}
+              <span class="badge badge-blue" style="margin-left:6px">Best Split</span>
+            {% endif %}
+          </td>
+          <td>{{ "{:,}".format(row.left_count) }}</td>
+          <td>
+            <div class="progress-container" style="width:80px;display:inline-flex">
+              <div class="progress-bar-fill progress-placed" style="width:{{ row.placed_left_pct }}%"></div>
+            </div>
+            {{ row.placed_left_pct }}%
+          </td>
+          <td>{{ "{:,}".format(row.right_count) }}</td>
+          <td>
+            <div class="progress-container" style="width:80px;display:inline-flex">
+              <div class="progress-bar-fill progress-placed" style="width:{{ row.placed_right_pct }}%"></div>
+            </div>
+            {{ row.placed_right_pct }}%
+          </td>
+          <td>
+            <span class="fill-val" style="font-size:15px">{{ row.ig }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if result.best_threshold %}
+  <div class="card-body" style="border-top:1px solid var(--border)">
+    <div class="insight-bar">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:8px"></i>
+      The best CGPA split is at <strong>{{ result.best_threshold.threshold }}</strong>
+      (IG = {{ result.best_threshold.ig }}) — the Decision Tree will likely use this as its first split.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     TRAIN MODEL
+═══════════════════════════════════ -->
+{% if result and action == 'train' %}
+
+<div class="card" id="dt-method-card" style="border-top:3px solid var(--accent)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-sitemap card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">{{ result.n_features }} Features</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px">
+      <div class="result-stat"><span class="rl">Train Size</span><span class="rv">{{ "{:,}".format(result.train_size) }}</span></div>
+      <div class="result-stat"><span class="rl">Test Size</span><span class="rv">{{ "{:,}".format(result.test_size) }}</span></div>
+      <div class="result-stat"><span class="rl">Tree Depth</span><span class="rv">{{ result.depth }}</span></div>
+      <div class="result-stat"><span class="rl">Leaf Nodes</span><span class="rv">{{ result.n_leaves }}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Accuracy cards -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px" id="dt-accuracy">
+  <div class="stat-card theme-blue" style="padding:20px">
+    <div class="stat-info">
+      <span class="stat-label">Training Accuracy</span>
+      <span class="stat-value">{{ (result.train_acc * 100) | round(2) }}%</span>
+      <span class="stat-subtext">On {{ "{:,}".format(result.train_size) }} training records</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-graduation-cap"></i></div>
+  </div>
+  <div class="stat-card theme-emerald" style="padding:20px">
+    <div class="stat-info">
+      <span class="stat-label">Test Accuracy</span>
+      <span class="stat-value">{{ (result.test_acc * 100) | round(2) }}%</span>
+      <span class="stat-subtext">On {{ "{:,}".format(result.test_size) }} test records</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-flask"></i></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="dt-bottom">
+
+  <!-- Classification report -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-file-lines card-icon"></i>
+        <h3>Classification Report</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Support</th></tr>
+        </thead>
+        <tbody>
+          {% for row in result.report_rows %}
+          <tr {% if row.class == 'weighted avg' %}style="font-weight:600;background:var(--slate-50)"{% endif %}>
+            <td style="font-weight:600">{{ row.class }}</td>
+            <td class="fill-val">{{ row.precision }}</td>
+            <td class="fill-val">{{ row.recall }}</td>
+            <td class="fill-val">{{ row.f1_score }}</td>
+            <td>{{ "{:,}".format(row.support) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Confusion Matrix -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-grid card-icon"></i>
+        <h3>Confusion Matrix</h3>
+      </div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;align-items:center">
+      <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;align-self:flex-start">
+        Rows = Actual, Columns = Predicted
+      </p>
+      <table style="border-collapse:separate;border-spacing:4px;max-width:300px">
+        <thead>
+          <tr>
+            <th style="background:transparent;border:none"></th>
+            {% for lbl in result.cm_labels %}
+            <th style="font-size:11px;text-align:center;padding:4px 8px;background:var(--accent-bg);border-radius:4px">
+              Pred: {{ lbl }}
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for i, row in result.confusion_matrix | enumerate %}
+          <tr>
+            <th style="font-size:11px;text-align:right;padding:4px 8px;background:var(--slate-100);border-radius:4px;font-weight:600">
+              Act: {{ result.cm_labels[i] }}
+            </th>
+            {% for j, val in row | enumerate %}
+            <td style="text-align:center;font-size:18px;font-weight:700;padding:14px 20px;border-radius:6px;
+              background:{% if i == j %}#dcfce7{% else %}#fef2f2{% endif %};
+              color:{% if i == j %}#15803d{% else %}#dc2626{% endif %}">
+              {{ val }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center">
+        <span style="color:#15803d;font-weight:600">■ Green = Correct</span> &nbsp;
+        <span style="color:#dc2626;font-weight:600">■ Red = Misclassified</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Feature Importance -->
+<div class="card" id="feature-importance-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-ranking-star card-icon"></i>
+      <h3>Top Feature Importances</h3>
+    </div>
+    <span class="header-badge">Top 10</span>
+  </div>
+  <div class="card-body">
+    {% set max_imp = result.feature_importances[0].importance %}
+    {% for row in result.feature_importances %}
+    <div style="margin-bottom:10px">
+      <div class="dist-item-header">
+        <span style="font-size:13px;font-weight:500">{{ row.feature }}</span>
+        <strong style="color:var(--accent)">{{ row.importance }}</strong>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar-fill progress-placed"
+             style="width:{{ ((row.importance / max_imp) * 100) | round | int }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     PRUNING / MODEL COMPARISON
+═══════════════════════════════════ -->
+{% if result and action == 'compare' %}
+
+<div class="card" id="compare-intro-card" style="border-top:3px solid var(--amber)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-scale-balanced card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">4 Models</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:8px"></i>
+      A deeper tree fits training data perfectly (high train accuracy) but fails on unseen data (low test accuracy) — this is <strong>overfitting</strong>.
+      Pruning techniques like <code>max_depth</code>, <code>min_samples_leaf</code>, and <code>ccp_alpha</code> control this.
+    </div>
+  </div>
+</div>
+
+<!-- Comparison table -->
+<div class="card" id="compare-table-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>4-Model Comparison</h3>
+    </div>
+    <span class="header-badge">Best: {{ result.best_model }}</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Train Accuracy</th>
+          <th>Test Accuracy</th>
+          <th>Overfit Gap</th>
+          <th>Depth</th>
+          <th>Leaves</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.models %}
+        <tr {% if row.model == result.best_model %}style="background:var(--accent-bg);font-weight:600"{% endif %}>
+          <td style="font-weight:600">
+            {{ row.model }}
+            {% if row.model == result.best_model %}
+              <span class="badge badge-blue" style="margin-left:4px">Best</span>
+            {% endif %}
+          </td>
+          <td>{{ (row.train_acc * 100) | round(2) }}%</td>
+          <td class="fill-val" style="font-size:15px">{{ (row.test_acc * 100) | round(2) }}%</td>
+          <td>
+            <span style="color:{% if row.overfit_gap > 0.05 %}#dc2626{% else %}var(--green){% endif %};font-weight:600">
+              {{ (row.overfit_gap * 100) | round(2) }}%
+            </span>
+          </td>
+          <td>{{ row.depth }}</td>
+          <td>{{ "{:,}".format(row.n_leaves) }}</td>
+          <td>{{ row.verdict }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Visual overfit bar chart -->
+<div class="card" id="compare-visual-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-chart-bar card-icon"></i>
+      <h3>Train vs Test Accuracy — Visual</h3>
+    </div>
+  </div>
+  <div class="card-body" style="padding:16px 20px">
+    {% for row in result.models %}
+    <div style="margin-bottom:16px">
+      <p style="font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--text-secondary)">{{ row.model }}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Train {{ (row.train_acc * 100) | round(1) }}%</div>
+          <div class="progress-container">
+            <div class="progress-bar-fill" style="width:{{ (row.train_acc * 100) | round | int }}%;background:#93c5fd"></div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Test {{ (row.test_acc * 100) | round(1) }}%</div>
+          <div class="progress-container">
+            <div class="progress-bar-fill progress-placed" style="width:{{ (row.test_acc * 100) | round | int }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="insight-bar" style="margin-top:10px">
+      <i class="fas fa-circle-check" style="color:var(--green);margin-right:6px"></i>
+      <strong>Best model: {{ result.best_model }}</strong> — achieves the highest test accuracy of {{ (result.best_test_acc * 100) | round(2) }}%.
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

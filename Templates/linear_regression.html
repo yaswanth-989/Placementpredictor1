@@ -1,0 +1,417 @@
+{% extends "base.html" %}
+{% block title %}Linear Regression{% endblock %}
+{% block breadcrumb %}Linear Regression{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Linear Regression — Placement Salary Prediction</h2>
+  <p>
+    Predict <strong>Salary Package</strong> using Linear Regression.
+    Covers Simple LR (single feature), Multiple LR (full pipeline), and the critical Data Leakage concept.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Cards ────────────────────────────────────── -->
+<div class="action-grid">
+
+  <a href="{{ url_for('linear_regression') }}?action=overview"
+     class="action-card {% if action == 'overview' %}active-action{% endif %}" id="btn-overview">
+    <span class="action-icon">📊</span>
+    <span class="action-title">Feature Overview</span>
+    <span class="action-desc">Correlation of every feature with Salary Package</span>
+  </a>
+
+  <a href="{{ url_for('linear_regression') }}?action=simple"
+     class="action-card {% if action == 'simple' %}active-action{% endif %}" id="btn-simple">
+    <span class="action-icon">📈</span>
+    <span class="action-title">Simple LR</span>
+    <span class="action-desc">Single feature: CGPA → Salary Package with MAE / MSE / R²</span>
+  </a>
+
+  <a href="{{ url_for('linear_regression') }}?action=multiple"
+     class="action-card {% if action == 'multiple' %}active-action{% endif %}" id="btn-multiple">
+    <span class="action-icon">🔢</span>
+    <span class="action-title">Multiple LR</span>
+    <span class="action-desc">All features → Salary via ColumnTransformer Pipeline (no leakage)</span>
+  </a>
+
+  <a href="{{ url_for('linear_regression') }}?action=leakage"
+     class="action-card {% if action == 'leakage' %}active-action{% endif %}" id="btn-leakage">
+    <span class="action-icon">⚠️</span>
+    <span class="action-title">Data Leakage Demo</span>
+    <span class="action-desc">Compare inflated vs true R² — leaked workflow vs correct pipeline</span>
+  </a>
+
+</div>
+
+<!-- ═══════════════════════════════════
+     FEATURE OVERVIEW
+═══════════════════════════════════ -->
+{% if overview and action == 'overview' %}
+
+<!-- Target stats -->
+<div class="card" id="target-stats-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-bullseye card-icon"></i>
+      <h3>Target Variable — {{ overview.target }}</h3>
+    </div>
+    <span class="header-badge">{{ "{:,}".format(overview.n_records) }} records</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+      {% for label, val in overview.target_stats.items() %}
+      <div class="result-stat">
+        <span class="rl">{{ label }}</span>
+        <span class="rv" style="font-size:16px">{{ val }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Correlation table -->
+<div class="card" id="corr-table-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-shuffle card-icon"></i>
+      <h3>Feature Correlation with Salary Package</h3>
+    </div>
+    <span class="header-badge">Sorted by |r|</span>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>Feature</th><th>Correlation (r)</th><th>Strength</th><th>Direction</th><th>Visual</th></tr>
+      </thead>
+      <tbody>
+        {% for row in overview.corr_rows %}
+        <tr>
+          <td style="font-weight:600">{{ row.feature }}</td>
+          <td>
+            <span style="font-family:monospace;font-size:14px;
+              color:{% if row.correlation > 0 %}var(--green){% else %}#dc2626{% endif %}">
+              {{ row.correlation }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if row.strength == 'Strong' %}badge-blue{% elif row.strength == 'Moderate' %}badge-green{% else %}badge-gray{% endif %}">
+              {{ row.strength }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if row.direction == 'Positive' %}badge-green{% else %}badge-red{% endif %}">
+              {{ row.direction }}
+            </span>
+          </td>
+          <td style="width:200px">
+            <div class="progress-container">
+              <div class="progress-bar-fill {% if row.correlation > 0 %}progress-placed{% else %}progress-miss{% endif %}"
+                   style="width:{{ (row.correlation | abs * 100) | round | int }}%"></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     SIMPLE LINEAR REGRESSION
+═══════════════════════════════════ -->
+{% if result and action == 'simple' %}
+
+<!-- Method card -->
+<div class="card" id="simple-method-card" style="border-top:3px solid var(--accent)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-function card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">1 Feature</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="result-stat">
+        <span class="rl">Regression Formula</span>
+        <code style="font-size:13px;background:var(--slate-100);padding:5px 10px;border-radius:4px;display:inline-block;margin-top:4px">
+          {{ result.formula }}
+        </code>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="result-stat">
+          <span class="rl">Coefficient (slope)</span>
+          <span class="rv">{{ result.coefficient }}</span>
+        </div>
+        <div class="result-stat">
+          <span class="rl">Intercept</span>
+          <span class="rv">{{ result.intercept }}</span>
+        </div>
+        <div class="result-stat">
+          <span class="rl">Train Records</span>
+          <span class="rv">{{ "{:,}".format(result.train_size) }}</span>
+        </div>
+        <div class="result-stat">
+          <span class="rl">Test Records</span>
+          <span class="rv">{{ "{:,}".format(result.test_size) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px" id="simple-metrics">
+  {% for metric, val in result.metrics.items() %}
+  <div class="stat-card" style="padding:18px 16px">
+    <div class="stat-info">
+      <span class="stat-label">{{ metric }}</span>
+      <span class="stat-value" style="font-size:20px">{{ val }}</span>
+      <span class="stat-subtext">
+        {% if metric == 'R²' %}1.0 = perfect fit{% elif metric == 'MAE' %}Avg absolute error{% elif metric == 'RMSE' %}Root mean sq error{% else %}Mean squared error{% endif %}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Actual vs Predicted -->
+<div class="card" id="simple-comparison">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-eye card-icon"></i>
+      <h3>Actual vs Predicted — First 10 Test Records</h3>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>#</th><th>Actual Salary (₹)</th><th>Predicted Salary (₹)</th><th>Absolute Error</th></tr>
+      </thead>
+      <tbody>
+        {% for row in result.comparison %}
+        <tr>
+          <td class="row-num">{{ loop.index }}</td>
+          <td>{{ "{:,.2f}".format(row.actual) }}</td>
+          <td class="fill-val">{{ "{:,.2f}".format(row.predicted) }}</td>
+          <td>
+            <span style="color:{% if row.error < 50000 %}var(--green){% elif row.error < 150000 %}var(--amber){% else %}#dc2626{% endif %};font-weight:600">
+              {{ "{:,.2f}".format(row.error) }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     MULTIPLE LINEAR REGRESSION
+═══════════════════════════════════ -->
+{% if result and action == 'multiple' %}
+
+<div class="card" id="multiple-method-card" style="border-top:3px solid var(--green)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-info card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">{{ result.total_features }} Features</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+      <div class="result-stat"><span class="rl">Numeric Features</span><span class="rv">{{ result.num_features }}</span></div>
+      <div class="result-stat"><span class="rl">Categorical Features</span><span class="rv">{{ result.cat_features }}</span></div>
+      <div class="result-stat"><span class="rl">Train Size</span><span class="rv">{{ "{:,}".format(result.train_size) }}</span></div>
+      <div class="result-stat"><span class="rl">Test Size</span><span class="rv">{{ "{:,}".format(result.test_size) }}</span></div>
+    </div>
+    <div class="insight-bar" style="margin-top:12px">
+      <i class="fas fa-circle-check" style="color:var(--green);margin-right:6px"></i>
+      <strong>Pipeline steps:</strong> Split first → Impute (train only) → OneHotEncode (train only) → Fit LinearRegression → Evaluate on test
+    </div>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px" id="multiple-metrics">
+  {% for metric, val in result.metrics.items() %}
+  <div class="stat-card" style="padding:18px 16px">
+    <div class="stat-info">
+      <span class="stat-label">{{ metric }}</span>
+      <span class="stat-value" style="font-size:20px">{{ val }}</span>
+      <span class="stat-subtext">
+        {% if metric == 'R²' %}1.0 = perfect{% elif metric == 'MAE' %}Avg error{% elif metric == 'RMSE' %}Root MSE{% else %}MSE{% endif %}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="multiple-bottom">
+  <!-- Top coefficients -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-arrows-up-down card-icon"></i>
+        <h3>Top Numeric Coefficients</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Feature</th><th>Coefficient</th><th>Impact</th></tr></thead>
+        <tbody>
+          {% for row in result.top_coefficients %}
+          <tr>
+            <td style="font-weight:600">{{ row.feature }}</td>
+            <td class="fill-val">{{ row.coefficient }}</td>
+            <td>
+              <div class="progress-container">
+                <div class="progress-bar-fill progress-placed"
+                     style="width:{{ [((row.coefficient | abs / result.top_coefficients[0].coefficient | abs) * 100) | round | int, 100] | min }}%">
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Actual vs Predicted -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-eye card-icon"></i>
+        <h3>Actual vs Predicted (10 rows)</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>#</th><th>Actual</th><th>Predicted</th><th>Error</th></tr></thead>
+        <tbody>
+          {% for row in result.comparison %}
+          <tr>
+            <td class="row-num">{{ loop.index }}</td>
+            <td>{{ "{:,.0f}".format(row.actual) }}</td>
+            <td class="fill-val">{{ "{:,.0f}".format(row.predicted) }}</td>
+            <td style="color:{% if row.error < 50000 %}var(--green){% elif row.error < 150000 %}var(--amber){% else %}#dc2626{% endif %};font-weight:600">
+              {{ "{:,.0f}".format(row.error) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     DATA LEAKAGE DEMO
+═══════════════════════════════════ -->
+{% if result and action == 'leakage' %}
+
+<div class="card" id="leakage-concept-card" style="border-top:3px solid #dc2626">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-triangle-exclamation card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i>
+      <h3>What is Data Leakage?</h3>
+    </div>
+  </div>
+  <div class="card-body">
+    <p style="font-size:13.5px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px">
+      <strong>Data Leakage</strong> occurs when information from the <em>test set</em> accidentally contaminates the training process.
+      The most common cause: computing statistics (mean, median, encodings) on the <strong>entire dataset</strong>
+      before splitting — so test data statistics leak into the model training phase.
+    </p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr><th>Step</th><th style="color:#dc2626">Leaked Workflow ❌</th><th style="color:var(--green)">Correct Workflow ✅</th></tr>
+        </thead>
+        <tbody>
+          {% for step in result.steps %}
+          <tr>
+            <td style="font-weight:600;white-space:nowrap">{{ step.step }}</td>
+            <td style="color:#dc2626">{{ step.leaked }}</td>
+            <td style="color:var(--green)">{{ step.correct }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics comparison -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="leakage-compare">
+
+  <!-- Leaked metrics -->
+  <div class="card" style="margin-bottom:0;border-top:3px solid #dc2626">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-xmark card-icon" style="background:#fef2f2;color:#dc2626;border-color:#fecaca"></i>
+        <h3>Leaked Workflow (WRONG)</h3>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:#dc2626;background:#fef2f2;padding:2px 8px;border-radius:4px">Inflated Metrics</span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        {% for metric, val in result.leaked.items() %}
+        <div class="result-stat">
+          <span class="rl">{{ metric }}</span>
+          <span class="rv" style="color:#dc2626">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Correct metrics -->
+  <div class="card" style="margin-bottom:0;border-top:3px solid var(--green)">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-check card-icon" style="background:#f0fdf4;color:#16a34a;border-color:#bbf7d0"></i>
+        <h3>Correct Pipeline (RIGHT)</h3>
+      </div>
+      <span style="font-size:11px;font-weight:600;color:var(--green);background:#f0fdf4;padding:2px 8px;border-radius:4px">True Performance</span>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        {% for metric, val in result.correct.items() %}
+        <div class="result-stat">
+          <span class="rl">{{ metric }}</span>
+          <span class="rv" style="color:var(--green)">{{ val }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- R² Gap highlight -->
+<div class="card" style="background:linear-gradient(135deg,#fef9c3,#fffbeb);border:1px solid #fde68a" id="leakage-gap">
+  <div class="card-body" style="text-align:center;padding:20px">
+    <p style="font-size:13px;color:var(--slate-600);margin-bottom:6px">R² Gap (Leaked − Correct)</p>
+    <p style="font-size:32px;font-weight:700;color:#b45309;margin:0">{{ result.r2_diff }}</p>
+    <p style="font-size:13px;color:var(--slate-500);margin-top:6px">
+      The leaked model appears <strong>{{ result.r2_diff }} R² units better</strong> — this is entirely artificial.
+      Never trust a model evaluated on data it has already "seen" during preprocessing.
+    </p>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

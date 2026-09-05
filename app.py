@@ -11,6 +11,8 @@ import preprocess
 import eda as eda_module
 import feature_scaling as fs_module
 import encoding as enc_module
+import linear_regression as lr_module
+import decision_tree_module as dt_module
 
 app = Flask(__name__)
 
@@ -270,6 +272,70 @@ def encoding():
         cat_info    = cat_info,
         enc_summary = enc_summary,
         error       = error
+    )
+
+
+# ─────────────────────────────────────────
+# Linear Regression
+# ─────────────────────────────────────────
+
+@app.route("/linear-regression")
+def linear_regression():
+    error    = None
+    action   = request.args.get("action", "overview")
+    result   = None
+    overview = None
+
+    try:
+        overview = lr_module.get_lr_overview()
+
+        if action == "simple":
+            result = lr_module.simple_linear_regression()
+        elif action == "multiple":
+            result = lr_module.multiple_linear_regression()
+        elif action == "leakage":
+            result = lr_module.data_leakage_demo()
+
+    except Exception as e:
+        error = "Error: {}".format(e)
+
+    return render_template(
+        "linear_regression.html",
+        active   = "linear-regression",
+        action   = action,
+        result   = result,
+        overview = overview,
+        error    = error
+    )
+
+
+# ─────────────────────────────────────────
+# Decision Tree
+# ─────────────────────────────────────────
+
+@app.route("/decision-tree")
+def decision_tree():
+    error       = None
+    action      = request.args.get("action", "concepts")
+    result      = None
+
+    try:
+        if action == "concepts":
+            result = dt_module.entropy_gini_demo()
+        elif action == "train":
+            result = dt_module.train_decision_tree()
+        elif action == "compare":
+            result = dt_module.model_comparison()
+
+    except Exception as e:
+        error = "Error: {}".format(e)
+
+    return render_template(
+        "decision_tree.html",
+        active  = "decision-tree",
+        action  = action,
+        result  = result,
+        error   = error
     )
 
 

@@ -91,23 +91,38 @@
         </a>
       </li>
 
-      <!-- Coming soon -->
+      <!-- Linear Regression -->
+      <li>
+        <a href="{{ url_for('linear_regression') }}"
+           class="{% if active == 'linear-regression' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span>Linear Regression</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Decision Tree -->
+      <li>
+        <a href="{{ url_for('decision_tree') }}"
+           class="{% if active == 'decision-tree' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-sitemap"></i></span>
+            <span>Decision Tree</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Prediction — still coming -->
       <li>
         <div class="nav-link-disabled">
           <div class="nav-item-content">
-            <span class="nav-icon"><i class="fas fa-brain"></i></span>
-            <span>Model Training</span>
+            <span class="nav-icon"><i class="fas fa-bullseye"></i></span>
+            <span>Prediction</span>
           </div>
           <span class="badge-soon">Soon</span>
         </div>
       </li>
-
-      <li>
-        <div class="nav-link-disabled">
-          <div class="nav-item-content">
-            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
-            <span>Prediction</span>
-          </div>
           <span class="badge-soon">Soon</span>
         </div>
       </li>
@@ -136,6 +151,14 @@
     </div>
     <div class="status-row">
       <span class="status-dot"></span> Encoding
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Linear Regression
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Decision Tree
       <span class="badge-done" style="margin-left:auto">✓</span>
     </div>
   </div>
