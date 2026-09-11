@@ -27,6 +27,7 @@ def _encode_X(X):
     """Impute numeric NaN with median, one-hot encode categorical columns."""
     from sklearn.impute import SimpleImputer
 
+    X = X.copy()   # avoid SettingWithCopyWarning
     num_cols = list(X.select_dtypes(include="number").columns)
     cat_cols = list(X.select_dtypes(exclude="number").columns)
 

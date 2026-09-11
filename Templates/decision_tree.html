@@ -306,12 +306,14 @@
           </tr>
         </thead>
         <tbody>
-          {% for i, row in result.confusion_matrix | enumerate %}
+          {% for row in result.confusion_matrix %}
+          {% set i = loop.index0 %}
           <tr>
             <th style="font-size:11px;text-align:right;padding:4px 8px;background:var(--slate-100);border-radius:4px;font-weight:600">
               Act: {{ result.cm_labels[i] }}
             </th>
-            {% for j, val in row | enumerate %}
+            {% for val in row %}
+            {% set j = loop.index0 %}
             <td style="text-align:center;font-size:18px;font-weight:700;padding:14px 20px;border-radius:6px;
               background:{% if i == j %}#dcfce7{% else %}#fef2f2{% endif %};
               color:{% if i == j %}#15803d{% else %}#dc2626{% endif %}">
