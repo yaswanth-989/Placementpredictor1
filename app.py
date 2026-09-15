@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 
 from load_data import (
     get_data_summary,
@@ -13,6 +13,9 @@ import feature_scaling as fs_module
 import encoding as enc_module
 import linear_regression as lr_module
 import decision_tree_module as dt_module
+import ensemble_models as ens_module
+import boosting_models as boost_module
+import predict as predict_module
 
 app = Flask(__name__)
 
@@ -336,6 +339,94 @@ def decision_tree():
         action  = action,
         result  = result,
         error   = error
+    )
+
+
+# ─────────────────────────────────────────
+# Ensemble Models
+# ─────────────────────────────────────────
+
+@app.route("/ensemble-models")
+def ensemble_models():
+    error  = None
+    action = request.args.get("action", "rf")
+    result = None
+    try:
+        if action == "rf":
+            result = ens_module.random_forest()
+        elif action == "adaboost":
+            result = ens_module.adaboost()
+        elif action == "compare":
+            result = ens_module.ensemble_comparison()
+    except Exception as e:
+        error = "Error: {}".format(e)
+    return render_template(
+        "ensemble_models.html",
+        active = "ensemble-models",
+        action = action,
+        result = result,
+        error  = error
+    )
+
+
+# ─────────────────────────────────────────
+# Boosting Models
+# ─────────────────────────────────────────
+
+@app.route("/boosting-models")
+def boosting_models():
+    error  = None
+    action = request.args.get("action", "gb")
+    result = None
+    try:
+        if action == "gb":
+            result = boost_module.gradient_boosting()
+        elif action == "xgboost":
+            result = boost_module.xgboost_model()
+        elif action == "lightgbm":
+            result = boost_module.lightgbm_model()
+        elif action == "compare":
+            result = boost_module.boosting_comparison()
+    except Exception as e:
+        error = "Error: {}".format(e)
+    return render_template(
+        "boosting_models.html",
+        active = "boosting-models",
+        action = action,
+        result = result,
+        error  = error
+    )
+
+
+# ─────────────────────────────────────────
+# Prediction
+# ─────────────────────────────────────────
+
+@app.route("/prediction", methods=["GET", "POST"])
+def prediction():
+    error     = None
+    result    = None
+    form_data = None
+    meta      = predict_module.get_form_meta()
+
+    if request.method == "POST":
+        form_data = dict(request.form)
+        model_name = form_data.get("model_name", "random_forest")
+        # Flatten single-value lists from form multidict
+        form_data = {k: v[0] if isinstance(v, list) and len(v) == 1 else v
+                     for k, v in form_data.items()}
+        try:
+            result = predict_module.predict_placement(form_data, model_name)
+        except Exception as e:
+            error = "Prediction error: {}".format(e)
+
+    return render_template(
+        "prediction.html",
+        active    = "prediction",
+        meta      = meta,
+        form_data = form_data,
+        result    = result,
+        error     = error
     )
 
 

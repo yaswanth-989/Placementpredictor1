@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Predict Placement{% endblock %}
+{% block breadcrumb %}Placement Predictor{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>🎯 Placement Predictor</h2>
+  <p>
+    Fill in a student's academic profile and activities, choose a model,
+    and instantly predict whether they will be <strong>Placed</strong> or <strong>Not Placed</strong>.
+  </p>
+</div>
+
+<!-- ══════════════════════════════════════
+     PREDICTION RESULT (shown after POST)
+══════════════════════════════════════ -->
+{% if result %}
+
+{% if result.placed %}
+<div id="result-banner" style="
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 2px solid #86efac; border-radius: var(--radius-lg);
+  padding: 28px 32px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 24px;
+  animation: slideIn .4s ease;">
+  <div style="font-size: 56px; line-height:1">✅</div>
+  <div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#16a34a;font-weight:700;margin-bottom:4px">Prediction Result</div>
+    <div style="font-size: 32px; font-weight: 800; color: #15803d; line-height:1.1">Placed</div>
+    {% if result.probability %}
+    <div style="font-size:15px; color:#16a34a; margin-top:6px; font-weight:500">
+      Confidence: <strong>{{ result.probability }}%</strong>
+      <span style="margin-left:10px; background:#dcfce7; border:1px solid #86efac; color:#15803d;
+             font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px">{{ result.confidence }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div id="result-banner" style="
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 2px solid #fca5a5; border-radius: var(--radius-lg);
+  padding: 28px 32px; margin-bottom: 24px;
+  display: flex; align-items: center; gap: 24px;
+  animation: slideIn .4s ease;">
+  <div style="font-size: 56px; line-height:1">❌</div>
+  <div>
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#dc2626;font-weight:700;margin-bottom:4px">Prediction Result</div>
+    <div style="font-size: 32px; font-weight: 800; color: #b91c1c; line-height:1.1">Not Placed</div>
+    {% if result.probability %}
+    <div style="font-size:15px; color:#dc2626; margin-top:6px; font-weight:500">
+      Confidence: <strong>{{ result.probability }}%</strong>
+      <span style="margin-left:10px; background:#fee2e2; border:1px solid #fca5a5; color:#dc2626;
+             font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px">{{ result.confidence }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px">
+  <div class="result-stat" style="padding:16px 20px">
+    <span class="rl">Model Used</span>
+    <span class="rv" style="font-size:13.5px">{{ result.model_used | replace('_',' ') | title }}</span>
+  </div>
+  <div class="result-stat" style="padding:16px 20px">
+    <span class="rl">First-time training?</span>
+    <span class="rv" style="font-size:13.5px">
+      {% if result.cached %}<span style="color:var(--green)">No (used cache ⚡)</span>
+      {% else %}<span style="color:var(--amber)">Yes (trained now)</span>{% endif %}
+    </span>
+  </div>
+</div>
+
+<!-- Top Feature Importances -->
+{% if result.top_features %}
+<div class="card" id="importance-card" style="margin-bottom:24px">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-ranking-star card-icon"></i>
+      <h3>Key Factors That Influenced This Prediction</h3>
+    </div>
+    <span class="header-badge">Top 10</span>
+  </div>
+  <div class="card-body">
+    {% set max_imp = result.top_features[0].importance %}
+    {% for row in result.top_features %}
+    <div style="margin-bottom:10px">
+      <div class="dist-item-header">
+        <span style="font-size:13px;font-weight:500">{{ row.feature }}</span>
+        <strong style="color:var(--accent)">{{ row.importance }}</strong>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar-gradient" style="width:{{ ((row.importance / max_imp) * 100) | round | int }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div style="margin-bottom:24px">
+  <a href="{{ url_for('prediction') }}" class="btn-primary" style="text-decoration:none;padding:10px 22px;border-radius:var(--radius-sm);background:var(--accent);color:#fff;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:8px">
+    <i class="fas fa-rotate-left"></i> Predict Again
+  </a>
+</div>
+
+{% endif %}
+
+<!-- ══════════════════════════════════════
+     INPUT FORM
+══════════════════════════════════════ -->
+<form method="POST" action="{{ url_for('prediction') }}" id="predict-form">
+
+  <!-- Model selector -->
+  <div class="card" id="model-select-card" style="border-top:3px solid var(--accent); margin-bottom:18px">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-robot card-icon"></i>
+        <h3>Select Prediction Model</h3>
+      </div>
+      <span style="font-size:12px;color:var(--text-muted)">
+        <i class="fas fa-clock" style="margin-right:4px"></i>First run trains the model (~5–30s)
+      </span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        {% for m in meta.models %}
+        <label style="cursor:pointer">
+          <input type="radio" name="model_name" value="{{ m.key }}"
+            {% if (form_data and form_data.get('model_name') == m.key) or (not form_data and m.key == 'random_forest') %}checked{% endif %}
+            style="display:none" class="model-radio">
+          <span class="algo-tag {{ m.badge }}" style="cursor:pointer;font-size:13px;padding:6px 14px;border-radius:8px;
+            transition:var(--transition);box-shadow:var(--shadow-xs)"
+            onclick="this.parentElement.querySelector('input').checked=true; highlightSelected(this)">
+            {{ m.label }}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      <p style="font-size:11.5px;color:var(--text-muted);margin-top:10px">
+        💡 Random Forest and LightGBM typically give the best accuracy. GB is slowest to train.
+      </p>
+    </div>
+  </div>
+
+  <!-- Form groups -->
+  {% for group_title, fields in meta.form_groups %}
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-pen-to-square card-icon"></i>
+        <h3>{{ group_title }}</h3>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px">
+        {% for field in fields %}
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">
+            {{ field | replace('_',' ') | replace('Sem','S') }}
+          </label>
+          <input type="number" name="{{ field }}" id="field-{{ field }}"
+            step="{% if 'SGPA' in field or 'CGPA' in field or 'Score' in field or 'Percent' in field or 'Rating' in field %}0.1{% else %}1{% endif %}"
+            min="0"
+            max="{% if 'SGPA' in field or 'CGPA' in field %}10{% elif 'Percent' in field %}100{% elif 'Score' in field %}100{% elif 'Rating' in field %}5{% elif 'Internships' in field %}10{% else %}50{% endif %}"
+            value="{{ form_data.get(field, meta.numeric_defaults.get(field, 0)) if form_data else meta.numeric_defaults.get(field, 0) }}"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+                   font-size:13.5px;background:var(--surface);color:var(--text-primary);
+                   transition:border-color .15s;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'"
+            onblur="this.style.borderColor='var(--border)'">
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Categorical features -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-sliders card-icon"></i>
+        <h3>🏫 Background &amp; Profile</h3>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px">
+        {% for field, options in meta.categorical_features.items() %}
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:4px">
+            {{ field | replace('_',' ') | replace('Of',' of ') }}
+          </label>
+          <select name="{{ field }}" id="field-{{ field }}"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);
+                   font-size:13.5px;background:var(--surface);color:var(--text-primary);
+                   cursor:pointer;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'"
+            onblur="this.style.borderColor='var(--border)'">
+            {% for opt in options %}
+            <option value="{{ opt }}" {% if form_data and form_data.get(field) == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
+    <button type="submit" id="predict-btn" style="
+      padding:12px 32px;background:var(--accent);color:#fff;border:none;
+      border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;
+      display:flex;align-items:center;gap:10px;transition:var(--transition);
+      box-shadow:var(--shadow);"
+      onmouseover="this.style.background='var(--accent-hover)'"
+      onmouseout="this.style.background='var(--accent)'"
+      onclick="showLoading()">
+      <i class="fas fa-circle-nodes"></i>
+      Predict Placement
+    </button>
+    <button type="reset" style="
+      padding:12px 20px;background:transparent;color:var(--text-secondary);
+      border:1px solid var(--border);border-radius:var(--radius-sm);
+      font-size:13.5px;font-weight:500;cursor:pointer;transition:var(--transition);"
+      onmouseover="this.style.background='var(--slate-100)'"
+      onmouseout="this.style.background='transparent'">
+      Reset Form
+    </button>
+    <p id="loading-msg" style="display:none;font-size:13px;color:var(--text-muted);animation:pulse 1.5s infinite">
+      <i class="fas fa-spinner fa-spin" style="margin-right:6px"></i>
+      Training model &amp; predicting… this may take up to 30s on first run.
+    </p>
+  </div>
+
+</form>
+
+<!-- ── Animations & JS ───────────────────────── -->
+<style>
+@keyframes slideIn {
+  from { opacity:0; transform:translateY(-12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:.5; }
+}
+</style>
+
+<script>
+function showLoading() {
+  document.getElementById('loading-msg').style.display = 'inline-flex';
+  document.getElementById('predict-btn').disabled = true;
+  document.getElementById('predict-btn').style.opacity = '0.7';
+}
+function highlightSelected(el) {
+  document.querySelectorAll('.algo-tag').forEach(t => t.style.boxShadow = 'var(--shadow-xs)');
+  el.style.boxShadow = '0 0 0 2px var(--accent)';
+}
+// Auto-highlight selected model on load
+document.addEventListener('DOMContentLoaded', () => {
+  const checked = document.querySelector('input[name="model_name"]:checked');
+  if (checked) {
+    const span = checked.parentElement.querySelector('.algo-tag');
+    if (span) span.style.boxShadow = '0 0 0 2px var(--accent)';
+  }
+});
+</script>
+
+{% endblock %}

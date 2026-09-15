@@ -113,19 +113,39 @@
         </a>
       </li>
 
-      <!-- Prediction — still coming -->
+      <!-- Ensemble Models -->
       <li>
-        <div class="nav-link-disabled">
+        <a href="{{ url_for('ensemble_models') }}"
+           class="{% if active == 'ensemble-models' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-layer-group"></i></span>
+            <span>Ensemble Models</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Boosting Models -->
+      <li>
+        <a href="{{ url_for('boosting_models') }}"
+           class="{% if active == 'boosting-models' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-bolt"></i></span>
+            <span>Boosting Models</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Prediction -->
+      <li>
+        <a href="{{ url_for('prediction') }}"
+           class="{% if active == 'prediction' %}active{% endif %}">
           <div class="nav-item-content">
             <span class="nav-icon"><i class="fas fa-bullseye"></i></span>
             <span>Prediction</span>
           </div>
-          <span class="badge-soon">Soon</span>
-        </div>
+        </a>
       </li>
-          <span class="badge-soon">Soon</span>
-        </div>
-      </li>
+
 
     </ul>
   </nav>
@@ -159,6 +179,18 @@
     </div>
     <div class="status-row">
       <span class="status-dot"></span> Decision Tree
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Ensemble Models
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Boosting Models
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Prediction
       <span class="badge-done" style="margin-left:auto">✓</span>
     </div>
   </div>

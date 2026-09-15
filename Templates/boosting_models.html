@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Boosting Models{% endblock %}
+{% block breadcrumb %}Boosting Methods{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h2>Boosting Models — GB · XGBoost · LightGBM</h2>
+  <p>
+    All three are members of the <strong>Gradient Boosting</strong> family — each tree corrects
+    errors of the previous one. XGBoost adds regularisation; LightGBM uses leaf-wise growth
+    for massive speed gains on large datasets.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Cards ───────────────────────────────────── -->
+<div class="action-grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+
+  <a href="{{ url_for('boosting_models') }}?action=gb"
+     class="action-card {% if action=='gb' %}active-action{% endif %}" id="btn-gb">
+    <span class="action-icon">📉</span>
+    <span class="action-title">Gradient Boosting</span>
+    <span class="action-desc">sklearn classic — 100 estimators, lr=0.1, depth=3</span>
+  </a>
+
+  <a href="{{ url_for('boosting_models') }}?action=xgboost"
+     class="action-card {% if action=='xgboost' %}active-action{% endif %}" id="btn-xgb">
+    <span class="action-icon">⚡</span>
+    <span class="action-title">XGBoost</span>
+    <span class="action-desc">Regularised gradient boosting with L1/L2 penalty</span>
+  </a>
+
+  <a href="{{ url_for('boosting_models') }}?action=lightgbm"
+     class="action-card {% if action=='lightgbm' %}active-action{% endif %}" id="btn-lgbm">
+    <span class="action-icon">💡</span>
+    <span class="action-title">LightGBM</span>
+    <span class="action-desc">Leaf-wise growth — fastest on 50K+ row datasets</span>
+  </a>
+
+  <a href="{{ url_for('boosting_models') }}?action=compare"
+     class="action-card {% if action=='compare' %}active-action{% endif %}" id="btn-compare">
+    <span class="action-icon">📊</span>
+    <span class="action-title">Compare All</span>
+    <span class="action-desc">GB vs XGBoost vs LightGBM vs DT baseline</span>
+  </a>
+
+</div>
+
+<!-- ═══════════════════════════════════
+     INDIVIDUAL MODEL RESULTS
+     (same layout for gb / xgboost / lightgbm)
+═══════════════════════════════════ -->
+{% if result and action in ('gb', 'xgboost', 'lightgbm') %}
+
+{% if action == 'gb' %}
+  {% set badge_cls = 'badge-gb' %} {% set border_col = '#7c3aed' %} {% set accent_col = '#7c3aed' %}
+{% elif action == 'xgboost' %}
+  {% set badge_cls = 'badge-xgb' %} {% set border_col = '#dc2626' %} {% set accent_col = '#dc2626' %}
+{% else %}
+  {% set badge_cls = 'badge-lgbm' %} {% set border_col = '#0369a1' %} {% set accent_col = '#0369a1' %}
+{% endif %}
+
+<!-- Method card -->
+<div class="card" id="method-card" style="border-top:3px solid {{ border_col }}">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-{% if action=='gb' %}chart-line{% elif action=='xgboost' %}bolt{% else %}lightbulb{% endif %} card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="algo-tag {{ badge_cls }}">
+      {% if action=='gb' %}📉 sklearn GB{% elif action=='xgboost' %}⚡ XGBoost{% else %}💡 LightGBM{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      {{ result.concept }}
+    </div>
+    <div class="param-list">
+      {% for k, v in result.params.items() %}
+      <span class="param-pill"><strong>{{ k }}</strong> {{ v }}</span>
+      {% endfor %}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:14px">
+      <div class="result-stat"><span class="rl">Train Records</span><span class="rv">{{ "{:,}".format(result.train_size) }}</span></div>
+      <div class="result-stat"><span class="rl">Test Records</span><span class="rv">{{ "{:,}".format(result.test_size) }}</span></div>
+      <div class="result-stat"><span class="rl">Total Features</span><span class="rv">{{ result.n_features }}</span></div>
+      <div class="result-stat"><span class="rl">Weighted F1</span><span class="rv" style="color:{{ accent_col }}">{{ result.weighted_f1 }}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Accuracy Cards -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px" id="accuracy-cards">
+  <div class="stat-card theme-blue" style="padding:20px">
+    <div class="stat-info">
+      <span class="stat-label">Training Accuracy</span>
+      <span class="stat-value">{{ (result.train_acc * 100) | round(2) }}%</span>
+      <span class="stat-subtext">On {{ "{:,}".format(result.train_size) }} records</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-graduation-cap"></i></div>
+  </div>
+  <div class="stat-card theme-emerald" style="padding:20px">
+    <div class="stat-info">
+      <span class="stat-label">Test Accuracy</span>
+      <span class="stat-value">{{ (result.test_acc * 100) | round(2) }}%</span>
+      <span class="stat-subtext">On {{ "{:,}".format(result.test_size) }} records</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-flask"></i></div>
+  </div>
+</div>
+
+<!-- Classification Report + Confusion Matrix -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px" id="report-cm">
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-file-lines card-icon"></i>
+        <h3>Classification Report</h3>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>Class</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th></tr></thead>
+        <tbody>
+          {% for row in result.report_rows %}
+          <tr {% if row.class == 'weighted avg' %}style="font-weight:600;background:var(--slate-50)"{% endif %}>
+            <td style="font-weight:600">{{ row.class }}</td>
+            <td class="fill-val">{{ row.precision }}</td>
+            <td class="fill-val">{{ row.recall }}</td>
+            <td class="fill-val">{{ row.f1_score }}</td>
+            <td>{{ "{:,}".format(row.support) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-grid card-icon"></i>
+        <h3>Confusion Matrix</h3>
+      </div>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;align-items:center">
+      <p style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px;align-self:flex-start">Rows = Actual &nbsp;|&nbsp; Columns = Predicted</p>
+      <table style="border-collapse:separate;border-spacing:4px">
+        <thead>
+          <tr>
+            <th style="background:transparent;border:none"></th>
+            {% for lbl in result.cm_labels %}
+            <th style="font-size:11px;text-align:center;padding:4px 8px;background:var(--accent-bg,#eff6ff);border-radius:4px">Pred: {{ lbl }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in result.confusion_matrix %}
+          {% set i = loop.index0 %}
+          <tr>
+            <th style="font-size:11px;text-align:right;padding:4px 8px;background:var(--slate-100);border-radius:4px;font-weight:600">Act: {{ result.cm_labels[i] }}</th>
+            {% for val in row %}
+            {% set j = loop.index0 %}
+            <td style="text-align:center;font-size:18px;font-weight:700;padding:14px 20px;border-radius:6px;
+              background:{% if i==j %}#dcfce7{% else %}#fef2f2{% endif %};
+              color:{% if i==j %}#15803d{% else %}#dc2626{% endif %}">{{ val }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center">
+        <span style="color:#15803d;font-weight:600">■ Green = Correct</span> &nbsp;
+        <span style="color:#dc2626;font-weight:600">■ Red = Misclassified</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Feature Importances -->
+<div class="card" id="feature-importance-card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-ranking-star card-icon"></i>
+      <h3>Top Feature Importances</h3>
+    </div>
+    <span class="header-badge">Top 10</span>
+  </div>
+  <div class="card-body">
+    {% set max_imp = result.feature_importances[0].importance %}
+    {% for row in result.feature_importances %}
+    <div style="margin-bottom:10px">
+      <div class="dist-item-header">
+        <span style="font-size:13px;font-weight:500">{{ row.feature }}</span>
+        <strong style="color:{{ accent_col }}">{{ row.importance }}</strong>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar-gradient" style="width:{{ ((row.importance / max_imp) * 100) | round | int }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endif %}
+
+<!-- ═══════════════════════════════════
+     COMPARISON TABLE
+═══════════════════════════════════ -->
+{% if result and action == 'compare' %}
+
+<div class="card" id="compare-intro" style="border-top:3px solid var(--purple)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-scale-balanced card-icon"></i>
+      <h3>{{ result.method }}</h3>
+    </div>
+    <span class="header-badge">4 Models</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:8px"></i>
+      Best overall: <strong>{{ result.best_model }}</strong> —
+      test accuracy <strong>{{ (result.best_test_acc * 100) | round(2) }}%</strong>
+    </div>
+  </div>
+</div>
+
+<div class="card" id="compare-table">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>Model Comparison Table</h3>
+    </div>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Train Acc</th>
+          <th>Test Acc</th>
+          <th>F1 (weighted)</th>
+          <th>Overfit Gap</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in result.models %}
+        <tr {% if row.model == result.best_model %}class="winner-row"{% endif %}>
+          <td style="font-weight:600">
+            {{ row.model }}
+            {% if row.model == result.best_model %}<span class="badge badge-blue" style="margin-left:4px">Best</span>{% endif %}
+          </td>
+          <td>{{ (row.train_acc * 100) | round(2) }}%</td>
+          <td class="fill-val" style="font-size:15px">{{ (row.test_acc * 100) | round(2) }}%</td>
+          <td class="fill-val">{{ row.f1 }}</td>
+          <td><span style="color:{% if row.overfit_gap > 0.05 %}#dc2626{% else %}var(--green){% endif %};font-weight:600">{{ (row.overfit_gap * 100) | round(2) }}%</span></td>
+          <td>{{ row.verdict }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Visual accuracy bars -->
+<div class="card" id="compare-visual">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-chart-bar card-icon"></i>
+      <h3>Train vs Test Accuracy — Visual</h3>
+    </div>
+  </div>
+  <div class="card-body" style="padding:16px 20px">
+    {% for row in result.models %}
+    <div style="margin-bottom:16px">
+      <p style="font-size:12.5px;font-weight:600;margin-bottom:5px;color:var(--text-secondary)">{{ row.model }}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Train {{ (row.train_acc*100)|round(1) }}%</div>
+          <div class="progress-container"><div style="width:{{ (row.train_acc*100)|round|int }}%;background:#93c5fd;height:100%;border-radius:inherit"></div></div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Test {{ (row.test_acc*100)|round(1) }}%</div>
+          <div class="progress-container"><div class="progress-bar-gradient" style="width:{{ (row.test_acc*100)|round|int }}%"></div></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="insight-bar" style="margin-top:10px">
+      <i class="fas fa-circle-check" style="color:var(--green);margin-right:6px"></i>
+      <strong>Winner: {{ result.best_model }}</strong> with
+      {{ (result.best_test_acc * 100) | round(2) }}% test accuracy.
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
