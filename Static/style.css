@@ -615,3 +615,74 @@ tr.winner-row { background:var(--blue-50) !important; }
 tr.winner-row td,
 tr.winner-row th { font-weight:600; color:var(--accent); }
 
+/* ═══════════════════════════════════════════════
+   UNSUPERVISED LEARNING STYLES
+═══════════════════════════════════════════════ */
+.badge-kmeans  { background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; }
+.badge-hier    { background:#ede9fe; color:#7c3aed; border:1px solid #ddd6fe; }
+.badge-dbscan  { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+.badge-pca     { background:#fae8ff; color:#a21caf; border:1px solid #f5d0fe; }
+.badge-tsne    { background:#fef3c7; color:#d97706; border:1px solid #fde68a; }
+.badge-umap    { background:#ffe4e6; color:#e11d48; border:1px solid #fecdd3; }
+.badge-anomaly { background:#fee2e2; color:#dc2626; border:1px solid #fecaca; }
+.badge-compare { background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+
+.param-control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-xs);
+}
+.param-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.param-control-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.param-control-group select,
+.param-control-group input {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-primary);
+  outline: none;
+}
+.param-control-group select:focus,
+.param-control-group input:focus {
+  border-color: var(--accent);
+}
+
+.persona-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--blue-50);
+  color: var(--blue-700);
+  border: 1px solid var(--blue-100);
+}
+.noise-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+

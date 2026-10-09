@@ -174,23 +174,24 @@
         </a>
       </div>
 
-      <!-- Step 6 — Coming Soon -->
-      <div class="pipeline-card" style="border-top:3px solid #a855f7;opacity:.7">
+      <!-- Step 6 -->
+      <div class="pipeline-card" style="border-top:3px solid #0284c7">
         <div>
           <div class="pipeline-card-top">
-            <div class="pipeline-icon" style="background:#faf5ff;color:#a855f7">
-              <i class="fas fa-brain"></i>
+            <div class="pipeline-icon" style="background:#e0f2fe;color:#0284c7">
+              <i class="fas fa-shapes"></i>
             </div>
-            <span class="pipeline-step-badge" style="background:#faf5ff;color:#7c3aed;border-color:#d8b4fe">Step 06</span>
+            <span class="pipeline-step-badge" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd">Step 06</span>
           </div>
-          <div class="pipeline-title" style="margin-top:10px">Model Training</div>
+          <div class="pipeline-title" style="margin-top:10px">Unsupervised Learning</div>
           <p class="pipeline-desc">
-            Train classifiers (Random Forest, Logistic Regression) with cross-validation metrics.
+            Discover student personas, cluster structures (K-Means, DBSCAN, Hierarchical), PCA/t-SNE/UMAP projections &amp; anomalies.
           </p>
         </div>
-        <button class="btn btn-outline" disabled style="justify-content:center;width:100%;cursor:not-allowed;opacity:.6">
-          Coming Soon
-        </button>
+        <a href="{{ url_for('unsupervised_learning') }}" class="btn btn-primary"
+           style="background:linear-gradient(135deg,#0284c7,#0ea5e9);justify-content:center">
+          Open Module <i class="fas fa-arrow-right"></i>
+        </a>
       </div>
 
     </div>

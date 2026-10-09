@@ -135,6 +135,28 @@
         </a>
       </li>
 
+      <!-- Unsupervised Learning -->
+      <li>
+        <a href="{{ url_for('unsupervised_learning') }}"
+           class="{% if active == 'unsupervised-learning' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-shapes"></i></span>
+            <span>Unsupervised Learning</span>
+          </div>
+        </a>
+      </li>
+
+      <!-- Model Evaluation -->
+      <li>
+        <a href="{{ url_for('model_evaluation') }}"
+           class="{% if active == 'model-evaluation' %}active{% endif %}">
+          <div class="nav-item-content">
+            <span class="nav-icon"><i class="fas fa-gauge-high"></i></span>
+            <span>Model Evaluation</span>
+          </div>
+        </a>
+      </li>
+
       <!-- Prediction -->
       <li>
         <a href="{{ url_for('prediction') }}"
@@ -187,6 +209,10 @@
     </div>
     <div class="status-row">
       <span class="status-dot"></span> Boosting Models
+      <span class="badge-done" style="margin-left:auto">✓</span>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span> Unsupervised Learning
       <span class="badge-done" style="margin-left:auto">✓</span>
     </div>
     <div class="status-row">

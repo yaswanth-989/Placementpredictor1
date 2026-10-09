@@ -1,0 +1,1445 @@
+{% extends "base.html" %}
+{% block title %}Unsupervised Learning{% endblock %}
+{% block breadcrumb %}Unsupervised Learning{% endblock %}
+
+{% block content %}
+
+<!-- Plotly CDN for rich interactive visual exploration -->
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<div class="page-header">
+  <h2>Unsupervised Learning — Clustering, Dimensionality Reduction &amp; Anomaly Detection</h2>
+  <p>
+    Discover intrinsic structure, student personas, and hidden patterns in unlabelled academic data
+    without relying on target outcome supervision.
+  </p>
+</div>
+
+{% if error %}
+<div class="error-box"><i class="fas fa-triangle-exclamation"></i> {{ error }}</div>
+{% endif %}
+
+<!-- ── Action Navigation Cards ────────────────────────────── -->
+<div class="action-grid" style="grid-template-columns:repeat(auto-fill,minmax(170px,1fr));margin-bottom:20px">
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=kmeans"
+     class="action-card {% if action=='kmeans' %}active-action{% endif %}" id="btn-kmeans">
+    <span class="action-icon">🧩</span>
+    <span class="action-title">K-Means</span>
+    <span class="action-desc">Centroid-based clustering &amp; Elbow analysis</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=hierarchical"
+     class="action-card {% if action=='hierarchical' %}active-action{% endif %}" id="btn-hierarchical">
+    <span class="action-icon">🌳</span>
+    <span class="action-title">Hierarchical</span>
+    <span class="action-desc">Agglomerative tree clustering (Ward/Average)</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=dbscan"
+     class="action-card {% if action=='dbscan' %}active-action{% endif %}" id="btn-dbscan">
+    <span class="action-icon">🔍</span>
+    <span class="action-title">DBSCAN</span>
+    <span class="action-desc">Density-based clusters &amp; noise isolation</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=pca"
+     class="action-card {% if action=='pca' %}active-action{% endif %}" id="btn-pca">
+    <span class="action-icon">📉</span>
+    <span class="action-title">PCA</span>
+    <span class="action-desc">Linear variance maximization &amp; Scree plot</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=tsne"
+     class="action-card {% if action=='tsne' %}active-action{% endif %}" id="btn-tsne">
+    <span class="action-icon">🌀</span>
+    <span class="action-title">t-SNE</span>
+    <span class="action-desc">Non-linear local neighborhood manifold</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=umap"
+     class="action-card {% if action=='umap' %}active-action{% endif %}" id="btn-umap">
+    <span class="action-icon">🌌</span>
+    <span class="action-title">UMAP</span>
+    <span class="action-desc">Fuzzy simplicial set manifold projection</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=anomaly"
+     class="action-card {% if action=='anomaly' %}active-action{% endif %}" id="btn-anomaly">
+    <span class="action-icon">🚨</span>
+    <span class="action-title">Anomaly Detection</span>
+    <span class="action-desc">Isolation Forest outlier discovery</span>
+  </a>
+
+  <a href="{{ url_for('unsupervised_learning') }}?action=compare"
+     class="action-card {% if action=='compare' %}active-action{% endif %}" id="btn-compare">
+    <span class="action-icon">📊</span>
+    <span class="action-title">Compare All</span>
+    <span class="action-desc">Full methodology matrix &amp; synthesis</span>
+  </a>
+
+</div>
+
+
+<!-- ════════════════════════════════════════════════
+     1. K-MEANS CLUSTERING
+════════════════════════════════════════════════ -->
+{% if action == 'kmeans' and result %}
+
+<!-- Interactive Param Bar -->
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="kmeans">
+  <div class="param-control-group">
+    <label for="k-select"><i class="fas fa-shapes" style="color:var(--accent)"></i> Number of Clusters (k):</label>
+    <select name="k" id="k-select">
+      {% for test_k in [2, 3, 4, 5, 6] %}
+      <option value="{{ test_k }}" {% if result.k == test_k %}selected{% endif %}>k = {{ test_k }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s on {{ "{:,}".format(result.n_samples) }} samples</span>
+</form>
+
+<!-- Concept Card -->
+<div class="card" style="border-top:3px solid #0284c7">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-circle-nodes card-icon" style="color:#0284c7"></i>
+      <h3>K-Means Clustering (k = {{ result.k }})</h3>
+    </div>
+    <span class="algo-tag badge-kmeans">🧩 K-Means</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      K-Means partitions students into <strong>{{ result.k }} distinct spherical clusters</strong> by minimizing the Within-Cluster Sum of Squares (Inertia). Each point is assigned to its nearest centroid in multi-dimensional skill space.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>Clusters (k):</strong> {{ result.k }}</span>
+      <span class="param-pill"><strong>Inertia (WCSS):</strong> {{ result.inertia }}</span>
+      <span class="param-pill"><strong>Features Used:</strong> {{ result.n_features }}</span>
+      <span class="param-pill"><strong>Initialization:</strong> k-means++</span>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics Stats Grid -->
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card theme-blue">
+    <div class="stat-info">
+      <span class="stat-label">Silhouette Score</span>
+      <span class="stat-value">{{ result.silhouette }}</span>
+      <span class="stat-subtext">Separation quality (-1 to +1)</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+  </div>
+
+  <div class="stat-card theme-purple">
+    <div class="stat-info">
+      <span class="stat-label">Davies-Bouldin Index</span>
+      <span class="stat-value">{{ result.davies_bouldin }}</span>
+      <span class="stat-subtext">Lower = tighter clusters</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-arrows-split-up-and-left"></i></div>
+  </div>
+
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Calinski-Harabasz</span>
+      <span class="stat-value">{{ "{:,}".format(result.calinski_harabasz) }}</span>
+      <span class="stat-subtext">Variance ratio criterion</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-star"></i></div>
+  </div>
+
+  <div class="stat-card theme-amber">
+    <div class="stat-info">
+      <span class="stat-label">Total Evaluated</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_samples) }}</span>
+      <span class="stat-subtext">Unlabelled student vectors</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-users"></i></div>
+  </div>
+</div>
+
+<!-- Visualizations Row -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+  
+  <!-- Cluster Scatter -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-braille card-icon"></i>
+        <h3>2D Cluster Map (PCA Projection)</h3>
+      </div>
+      <span class="header-badge">{{ result.k }} Clusters</span>
+    </div>
+    <div class="card-body">
+      <div id="kmeans-scatter-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+  <!-- Elbow & Silhouette Curve -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-chart-area card-icon"></i>
+        <h3>Elbow Curve &amp; Silhouette Analysis</h3>
+      </div>
+      <span class="header-badge">k = 2 to 7</span>
+    </div>
+    <div class="card-body">
+      <div id="kmeans-elbow-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Discovered Cluster Personas Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-id-card card-icon"></i>
+      <h3>Discovered Student Segments &amp; Personas</h3>
+    </div>
+    <span class="header-badge">Unsupervised Profiling</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Cluster</th>
+            <th>Persona Label</th>
+            <th>Students</th>
+            <th>Mean CGPA</th>
+            <th>Coding Score</th>
+            <th>Aptitude</th>
+            <th>Attendance</th>
+            <th>Backlogs %</th>
+            <th>Empirical Placement Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in result.cluster_profiles %}
+          <tr>
+            <td><span class="persona-tag">Cluster {{ p.cluster_id }}</span></td>
+            <td><strong>{{ p.persona }}</strong></td>
+            <td>{{ "{:,}".format(p.count) }} ({{ p.pct }}%)</td>
+            <td><strong>{{ p.mean_cgpa }}</strong></td>
+            <td>{{ p.mean_code }}</td>
+            <td>{{ p.mean_apt }}</td>
+            <td>{{ p.mean_att }}%</td>
+            <td style="color:{% if p.backlog_rate > 20 %}#dc2626{% else %}#16a34a{% endif %}">{{ p.backlog_rate }}%</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="progress-container" style="width:70px">
+                  <div class="progress-bar-gradient" style="width:{{ p.place_rate }}%"></div>
+                </div>
+                <strong style="color:var(--accent)">{{ p.place_rate }}%</strong>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const centroids = {{ result.centroids_2d | tojson }};
+  const elbow = {{ result.elbow_curve | tojson }};
+
+  // 1. Scatter traces per cluster
+  const clusters = [...new Set(pts.map(p => p.cluster))].sort();
+  const colors = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+  const traces = clusters.map(c => {
+    const c_pts = pts.filter(p => p.cluster === c);
+    return {
+      x: c_pts.map(p => p.x),
+      y: c_pts.map(p => p.y),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Cluster ' + c,
+      marker: { size: 6, color: colors[c % colors.length], opacity: 0.75 },
+      text: c_pts.map(p => `Cluster ${p.cluster}<br>CGPA: ${p.cgpa}<br>Placement: ${p.placed}`),
+      hoverinfo: 'text'
+    };
+  });
+
+  // Centroids
+  traces.push({
+    x: centroids.map(c => c.x),
+    y: centroids.map(c => c.y),
+    mode: 'markers+text',
+    type: 'scatter',
+    name: 'Centroids',
+    text: centroids.map(c => 'C' + c.cluster),
+    textposition: 'top center',
+    marker: { size: 13, symbol: 'cross', color: '#0f172a', line: { width: 2, color: '#fff' } }
+  });
+
+  const scatterLayout = {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'PCA Dimension 1', zeroline: false },
+    yaxis: { title: 'PCA Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  };
+  Plotly.newPlot('kmeans-scatter-plot', traces, scatterLayout, { responsive: true, displayModeBar: false });
+
+  // 2. Elbow & Silhouette dual-axis plot
+  const elbowTrace = {
+    x: elbow.map(e => e.k),
+    y: elbow.map(e => e.inertia),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Inertia (WCSS)',
+    line: { color: '#0284c7', width: 3 },
+    marker: { size: 8 }
+  };
+  const silTrace = {
+    x: elbow.map(e => e.k),
+    y: elbow.map(e => e.silhouette),
+    type: 'scatter',
+    mode: 'lines+markers',
+    name: 'Silhouette Score',
+    yaxis: 'y2',
+    line: { color: '#10b981', width: 3, dash: 'dot' },
+    marker: { size: 8 }
+  };
+  const elbowLayout = {
+    margin: { t: 30, b: 40, l: 55, r: 55 },
+    xaxis: { title: 'Number of Clusters (k)', dtick: 1 },
+    yaxis: { title: 'Inertia', titlefont: { color: '#0284c7' }, tickfont: { color: '#0284c7' } },
+    yaxis2: { title: 'Silhouette Score', titlefont: { color: '#10b981' }, tickfont: { color: '#10b981' }, overlaying: 'y', side: 'right' },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  };
+  Plotly.newPlot('kmeans-elbow-plot', [elbowTrace, silTrace], elbowLayout, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     2. HIERARCHICAL / AGGLOMERATIVE CLUSTERING
+════════════════════════════════════════════════ -->
+{% if action == 'hierarchical' and result %}
+
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="hierarchical">
+  <div class="param-control-group">
+    <label for="k-hier"><i class="fas fa-sitemap" style="color:#7c3aed"></i> Number of Clusters:</label>
+    <select name="k" id="k-hier">
+      {% for test_k in [2, 3, 4, 5] %}
+      <option value="{{ test_k }}" {% if result.n_clusters == test_k %}selected{% endif %}>k = {{ test_k }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="param-control-group">
+    <label for="linkage-select"><i class="fas fa-link"></i> Linkage Criterion:</label>
+    <select name="linkage" id="linkage-select">
+      <option value="ward" {% if result.linkage == 'ward' %}selected{% endif %}>Ward (Minimizes variance)</option>
+      <option value="complete" {% if result.linkage == 'complete' %}selected{% endif %}>Complete (Maximum distance)</option>
+      <option value="average" {% if result.linkage == 'average' %}selected{% endif %}>Average (Mean pairwise)</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s on {{ "{:,}".format(result.n_samples) }} samples</span>
+</form>
+
+<div class="card" style="border-top:3px solid #7c3aed">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-sitemap card-icon" style="color:#7c3aed"></i>
+      <h3>Agglomerative Hierarchical Clustering (Linkage: {{ result.linkage | capitalize }})</h3>
+    </div>
+    <span class="algo-tag badge-hier">🌳 Hierarchical</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      Hierarchical clustering builds a bottom-up tree (dendrogram) by progressively merging individual students or groups based on <strong>{{ result.linkage }} linkage</strong>. It does not require a random seed and reveals natural sub-taxonomies.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>Linkage:</strong> {{ result.linkage }}</span>
+      <span class="param-pill"><strong>Cut Height Clusters:</strong> {{ result.n_clusters }}</span>
+      <span class="param-pill"><strong>Complexity:</strong> O(N²)</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card theme-purple">
+    <div class="stat-info">
+      <span class="stat-label">Silhouette Score</span>
+      <span class="stat-value">{{ result.silhouette }}</span>
+      <span class="stat-subtext">Cluster separation</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+  </div>
+
+  <div class="stat-card theme-indigo">
+    <div class="stat-info">
+      <span class="stat-label">Davies-Bouldin Index</span>
+      <span class="stat-value">{{ result.davies_bouldin }}</span>
+      <span class="stat-subtext">Lower = better compact clusters</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-arrows-split-up-and-left"></i></div>
+  </div>
+
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Calinski-Harabasz</span>
+      <span class="stat-value">{{ "{:,}".format(result.calinski_harabasz) }}</span>
+      <span class="stat-subtext">Dispersion metric</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-star"></i></div>
+  </div>
+
+  <div class="stat-card theme-blue">
+    <div class="stat-info">
+      <span class="stat-label">Active Clusters</span>
+      <span class="stat-value">{{ result.n_clusters }}</span>
+      <span class="stat-subtext">Truncated tree branches</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-sitemap"></i></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-braille card-icon"></i>
+        <h3>Hierarchical Projection Map</h3>
+      </div>
+      <span class="header-badge">{{ result.linkage | capitalize }} Linkage</span>
+    </div>
+    <div class="card-body">
+      <div id="hier-scatter-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-table card-icon"></i>
+        <h3>Branch Summary &amp; Profiles</h3>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Students</th>
+              <th>CGPA</th>
+              <th>Coding</th>
+              <th>Aptitude</th>
+              <th>Placement %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in result.cluster_profiles %}
+            <tr>
+              <td><span class="persona-tag" style="background:#ede9fe;color:#7c3aed;border-color:#ddd6fe">Cluster {{ p.cluster_id }}</span></td>
+              <td>{{ "{:,}".format(p.count) }} ({{ p.pct }}%)</td>
+              <td><strong>{{ p.mean_cgpa }}</strong></td>
+              <td>{{ p.mean_code }}</td>
+              <td>{{ p.mean_apt }}</td>
+              <td><strong style="color:var(--accent)">{{ p.place_rate }}%</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const clusters = [...new Set(pts.map(p => p.cluster))].sort();
+  const colors = ['#7c3aed', '#059669', '#d97706', '#2563eb', '#e11d48'];
+  const traces = clusters.map(c => {
+    const c_pts = pts.filter(p => p.cluster === c);
+    return {
+      x: c_pts.map(p => p.x),
+      y: c_pts.map(p => p.y),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Branch ' + c,
+      marker: { size: 6, color: colors[c % colors.length], opacity: 0.8 },
+      text: c_pts.map(p => `Cluster ${p.cluster}<br>CGPA: ${p.cgpa}<br>Placement: ${p.placed}`),
+      hoverinfo: 'text'
+    };
+  });
+  Plotly.newPlot('hier-scatter-plot', traces, {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'PCA Dimension 1', zeroline: false },
+    yaxis: { title: 'PCA Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     3. DENSITY-BASED CLUSTERING (DBSCAN)
+════════════════════════════════════════════════ -->
+{% if action == 'dbscan' and result %}
+
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="dbscan">
+  <div class="param-control-group">
+    <label for="eps-select"><i class="fas fa-bullseye" style="color:#16a34a"></i> Epsilon (eps):</label>
+    <select name="eps" id="eps-select">
+      <option value="0.4" {% if result.eps == 0.4 %}selected{% endif %}>0.4 (Very Fine / Higher Noise)</option>
+      <option value="0.6" {% if result.eps == 0.6 %}selected{% endif %}>0.6 (Balanced)</option>
+      <option value="0.7" {% if result.eps == 0.7 %}selected{% endif %}>0.7 (Default Optimal)</option>
+      <option value="0.9" {% if result.eps == 0.9 %}selected{% endif %}>0.9 (Broad Density)</option>
+      <option value="1.2" {% if result.eps == 1.2 %}selected{% endif %}>1.2 (Loose / Low Noise)</option>
+    </select>
+  </div>
+  <div class="param-control-group">
+    <label for="ms-select"><i class="fas fa-users-rays"></i> Min Samples:</label>
+    <select name="min_samples" id="ms-select">
+      <option value="10" {% if result.min_samples == 10 %}selected{% endif %}>10</option>
+      <option value="15" {% if result.min_samples == 15 %}selected{% endif %}>15 (Recommended)</option>
+      <option value="25" {% if result.min_samples == 25 %}selected{% endif %}>25</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s</span>
+</form>
+
+<div class="card" style="border-top:3px solid #16a34a">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-braille card-icon" style="color:#16a34a"></i>
+      <h3>DBSCAN Density-Based Clustering (eps = {{ result.eps }}, min_samples = {{ result.min_samples }})</h3>
+    </div>
+    <span class="algo-tag badge-dbscan">🔍 DBSCAN</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      DBSCAN identifies regions of high point density separated by low-density valleys. Unlike K-Means, <strong>it does not assume spherical clusters</strong> and automatically identifies sparse boundary records as <strong>Noise / Outliers (label -1)</strong>.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>eps:</strong> {{ result.eps }}</span>
+      <span class="param-pill"><strong>min_samples:</strong> {{ result.min_samples }}</span>
+      <span class="param-pill"><strong>Dense Clusters Found:</strong> {{ result.n_clusters }}</span>
+      <span class="param-pill"><strong>Noise Points:</strong> {{ "{:,}".format(result.n_noise) }} ({{ result.noise_pct }}%)</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Dense Clusters</span>
+      <span class="stat-value">{{ result.n_clusters }}</span>
+      <span class="stat-subtext">Contiguous density basins</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-layer-group"></i></div>
+  </div>
+
+  <div class="stat-card theme-red">
+    <div class="stat-info">
+      <span class="stat-label">Noise / Outliers</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_noise) }}</span>
+      <span class="stat-subtext">{{ result.noise_pct }}% of all points</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+
+  <div class="stat-card theme-blue">
+    <div class="stat-info">
+      <span class="stat-label">Clustered Silhouette</span>
+      <span class="stat-value">{{ result.silhouette }}</span>
+      <span class="stat-subtext">On dense cluster points</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+  </div>
+
+  <div class="stat-card theme-purple">
+    <div class="stat-info">
+      <span class="stat-label">Total Evaluated</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_samples) }}</span>
+      <span class="stat-subtext">Multi-dimensional points</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-users"></i></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-braille card-icon"></i>
+        <h3>DBSCAN Density Map</h3>
+      </div>
+      <span class="header-badge">Core vs Noise</span>
+    </div>
+    <div class="card-body">
+      <div id="dbscan-scatter-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-table card-icon"></i>
+        <h3>Dense Cluster vs Noise Profiles</h3>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Segment</th>
+              <th>Count</th>
+              <th>CGPA</th>
+              <th>Coding</th>
+              <th>Aptitude</th>
+              <th>Placement %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in result.cluster_profiles %}
+            <tr {% if p.is_noise %}style="background:#fef2f2"{% endif %}>
+              <td>
+                {% if p.is_noise %}
+                <span class="noise-tag"><i class="fas fa-ban"></i> Noise / Outlier</span>
+                {% else %}
+                <span class="persona-tag" style="background:#dcfce7;color:#15803d;border-color:#bbf7d0">Cluster {{ p.cluster_id }}</span>
+                {% endif %}
+              </td>
+              <td>{{ "{:,}".format(p.count) }} ({{ p.pct }}%)</td>
+              <td><strong>{{ p.mean_cgpa }}</strong></td>
+              <td>{{ p.mean_code }}</td>
+              <td>{{ p.mean_apt }}</td>
+              <td><strong style="color:var(--accent)">{{ p.place_rate }}%</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const clusters = [...new Set(pts.map(p => p.cluster))].sort();
+  const colors = ['#10b981', '#2563eb', '#8b5cf6', '#06b6d4'];
+  const traces = [];
+
+  // Add clustered traces
+  clusters.filter(c => c !== -1).forEach(c => {
+    const c_pts = pts.filter(p => p.cluster === c);
+    traces.push({
+      x: c_pts.map(p => p.x),
+      y: c_pts.map(p => p.y),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Cluster ' + c,
+      marker: { size: 6, color: colors[c % colors.length], opacity: 0.8 },
+      text: c_pts.map(p => `Cluster ${p.cluster}<br>CGPA: ${p.cgpa}<br>Placement: ${p.placed}`),
+      hoverinfo: 'text'
+    });
+  });
+
+  // Add noise trace in glowing red
+  const noise_pts = pts.filter(p => p.is_noise);
+  if (noise_pts.length > 0) {
+    traces.push({
+      x: noise_pts.map(p => p.x),
+      y: noise_pts.map(p => p.y),
+      mode: 'markers',
+      type: 'scatter',
+      name: 'Noise (-1)',
+      marker: { size: 7, color: '#dc2626', symbol: 'x', opacity: 0.85 },
+      text: noise_pts.map(p => `Noise Outlier<br>CGPA: ${p.cgpa}<br>Placement: ${p.placed}`),
+      hoverinfo: 'text'
+    });
+  }
+
+  Plotly.newPlot('dbscan-scatter-plot', traces, {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'PCA Dimension 1', zeroline: false },
+    yaxis: { title: 'PCA Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     4. DIMENSIONALITY REDUCTION: PCA
+════════════════════════════════════════════════ -->
+{% if action == 'pca' and result %}
+
+<div class="card" style="border-top:3px solid #a21caf">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-compress-arrows-alt card-icon" style="color:#a21caf"></i>
+      <h3>Principal Component Analysis (PCA)</h3>
+    </div>
+    <span class="algo-tag badge-pca">📉 PCA</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      PCA is an orthogonal linear transformation that converts correlated student features into uncorrelated <strong>Principal Components</strong>. PC1 captures the maximum direction of variance, followed by PC2.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>Original Features:</strong> {{ result.n_features }}</span>
+      <span class="param-pill"><strong>PC1 Explained Variance:</strong> {{ result.pc1_var }}%</span>
+      <span class="param-pill"><strong>PC2 Explained Variance:</strong> {{ result.pc2_var }}%</span>
+      <span class="param-pill"><strong>Total 2D Variance Preserved:</strong> {{ result.total_2d_var }}%</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card theme-purple">
+    <div class="stat-info">
+      <span class="stat-label">PC1 Variance</span>
+      <span class="stat-value">{{ result.pc1_var }}%</span>
+      <span class="stat-subtext">Primary axis of variation</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-chart-line"></i></div>
+  </div>
+
+  <div class="stat-card theme-blue">
+    <div class="stat-info">
+      <span class="stat-label">PC2 Variance</span>
+      <span class="stat-value">{{ result.pc2_var }}%</span>
+      <span class="stat-subtext">Secondary orthogonal axis</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-chart-column"></i></div>
+  </div>
+
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Total 2D Retention</span>
+      <span class="stat-value">{{ result.total_2d_var }}%</span>
+      <span class="stat-subtext">Cumulative across PC1 &amp; PC2</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-percent"></i></div>
+  </div>
+
+  <div class="stat-card theme-amber">
+    <div class="stat-info">
+      <span class="stat-label">Compression Ratio</span>
+      <span class="stat-value">{{ result.n_features }} &rarr; 2</span>
+      <span class="stat-subtext">Lossless orthogonal projection</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-compress"></i></div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-braille card-icon"></i>
+        <h3>2D PCA Student Map</h3>
+      </div>
+      <span class="header-badge">PC1 vs PC2</span>
+    </div>
+    <div class="card-body">
+      <div id="pca-scatter-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-chart-bar card-icon"></i>
+        <h3>Scree Plot (Explained Variance)</h3>
+      </div>
+      <span class="header-badge">Top 10 Components</span>
+    </div>
+    <div class="card-body">
+      <div id="pca-scree-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Feature Loadings Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-sliders card-icon"></i>
+      <h3>Component Interpretation &amp; Feature Loadings</h3>
+    </div>
+    <span class="header-badge">Eigenvectors</span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-primary)">
+          <i class="fas fa-arrow-up" style="color:#16a34a"></i> Top Positive Drivers for PC1
+        </h4>
+        {% for f in result.top_pc1_pos %}
+        <div style="margin-bottom:8px">
+          <div class="dist-item-header">
+            <span style="font-size:12.5px">{{ f.feature }}</span>
+            <strong style="color:#16a34a">+{{ f.weight }}</strong>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div>
+        <h4 style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text-primary)">
+          <i class="fas fa-arrow-down" style="color:#dc2626"></i> Top Negative Drivers for PC1
+        </h4>
+        {% for f in result.top_pc1_neg %}
+        <div style="margin-bottom:8px">
+          <div class="dist-item-header">
+            <span style="font-size:12.5px">{{ f.feature }}</span>
+            <strong style="color:#dc2626">{{ f.weight }}</strong>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const exp_var = {{ result.explained_variance | tojson }};
+  const cum_var = {{ result.cumulative_variance | tojson }};
+
+  // Scatter
+  const placed_pts = pts.filter(p => p.placed === 'Placed' || p.placed === '1');
+  const unplaced_pts = pts.filter(p => p.placed !== 'Placed' && p.placed !== '1');
+
+  Plotly.newPlot('pca-scatter-plot', [
+    {
+      x: placed_pts.map(p => p.x),
+      y: placed_pts.map(p => p.y),
+      mode: 'markers',
+      name: 'Placed Students',
+      marker: { color: '#16a34a', size: 6, opacity: 0.75 },
+      text: placed_pts.map(p => `Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    },
+    {
+      x: unplaced_pts.map(p => p.x),
+      y: unplaced_pts.map(p => p.y),
+      mode: 'markers',
+      name: 'Unplaced Students',
+      marker: { color: '#ef4444', size: 6, opacity: 0.65 },
+      text: unplaced_pts.map(p => `Not Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    }
+  ], {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'Principal Component 1 (' + {{ result.pc1_var }} + '%)', zeroline: false },
+    yaxis: { title: 'Principal Component 2 (' + {{ result.pc2_var }} + '%)', zeroline: false },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+
+  // Scree Plot
+  const x_labels = exp_var.map((_, i) => 'PC' + (i + 1));
+  Plotly.newPlot('pca-scree-plot', [
+    {
+      x: x_labels,
+      y: exp_var,
+      type: 'bar',
+      name: 'Individual Variance %',
+      marker: { color: '#a21caf' }
+    },
+    {
+      x: x_labels,
+      y: cum_var,
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Cumulative %',
+      line: { color: '#2563eb', width: 2.5 }
+    }
+  ], {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'Principal Components' },
+    yaxis: { title: 'Variance (%)' },
+    legend: { orientation: 'h', y: -0.2 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     5. DIMENSIONALITY REDUCTION: t-SNE
+════════════════════════════════════════════════ -->
+{% if action == 'tsne' and result %}
+
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="tsne">
+  <div class="param-control-group">
+    <label for="perp-select"><i class="fas fa-sliders" style="color:#d97706"></i> Perplexity:</label>
+    <select name="perplexity" id="perp-select">
+      <option value="15" {% if result.perplexity == 15 %}selected{% endif %}>15 (Focus on fine local structure)</option>
+      <option value="30" {% if result.perplexity == 30 %}selected{% endif %}>30 (Recommended default)</option>
+      <option value="45" {% if result.perplexity == 45 %}selected{% endif %}>45 (Wider neighborhood affinities)</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s on {{ "{:,}".format(result.n_samples) }} samples</span>
+</form>
+
+<div class="card" style="border-top:3px solid #d97706">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-project-diagram card-icon" style="color:#d97706"></i>
+      <h3>t-Distributed Stochastic Neighbor Embedding (t-SNE)</h3>
+    </div>
+    <span class="algo-tag badge-tsne">🌀 t-SNE</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      t-SNE converts high-dimensional student Euclidean distances into conditional probabilities and minimizes Kullback-Leibler (KL) divergence in 2D space. It is exceptionally skilled at revealing <strong>isolated sub-populations and complex non-linear groupings</strong>.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>Perplexity:</strong> {{ result.perplexity }}</span>
+      <span class="param-pill"><strong>Samples Mapped:</strong> {{ "{:,}".format(result.n_samples) }}</span>
+      <span class="param-pill"><strong>KL Divergence:</strong> {{ result.kl_divergence }}</span>
+      <span class="param-pill"><strong>Iterations:</strong> 600</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-braille card-icon"></i>
+      <h3>2D t-SNE Manifold Projection</h3>
+    </div>
+    <span class="header-badge">Non-Linear Manifold</span>
+  </div>
+  <div class="card-body">
+    <div id="tsne-scatter-plot" style="width:100%;height:450px"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const placed = pts.filter(p => p.placed === 'Placed' || p.placed === '1');
+  const unplaced = pts.filter(p => p.placed !== 'Placed' && p.placed !== '1');
+
+  Plotly.newPlot('tsne-scatter-plot', [
+    {
+      x: placed.map(p => p.x),
+      y: placed.map(p => p.y),
+      mode: 'markers',
+      name: 'Placed Candidates',
+      marker: { color: '#16a34a', size: 6, opacity: 0.8 },
+      text: placed.map(p => `Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    },
+    {
+      x: unplaced.map(p => p.x),
+      y: unplaced.map(p => p.y),
+      mode: 'markers',
+      name: 'Unplaced Candidates',
+      marker: { color: '#ef4444', size: 6, opacity: 0.7 },
+      text: unplaced.map(p => `Not Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    }
+  ], {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 't-SNE Dimension 1', zeroline: false },
+    yaxis: { title: 't-SNE Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.15 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     6. DIMENSIONALITY REDUCTION: UMAP
+════════════════════════════════════════════════ -->
+{% if action == 'umap' and result %}
+
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="umap">
+  <div class="param-control-group">
+    <label for="nn-select"><i class="fas fa-network-wired" style="color:#e11d48"></i> n_neighbors:</label>
+    <select name="n_neighbors" id="nn-select">
+      <option value="10" {% if result.n_neighbors == 10 %}selected{% endif %}>10 (Fine local manifold)</option>
+      <option value="15" {% if result.n_neighbors == 15 %}selected{% endif %}>15 (Balanced default)</option>
+      <option value="30" {% if result.n_neighbors == 30 %}selected{% endif %}>30 (Broader global structure)</option>
+    </select>
+  </div>
+  <div class="param-control-group">
+    <label for="md-select"><i class="fas fa-arrows-left-right"></i> min_dist:</label>
+    <select name="min_dist" id="md-select">
+      <option value="0.05" {% if result.min_dist == 0.05 %}selected{% endif %}>0.05 (Clustered tightly)</option>
+      <option value="0.1" {% if result.min_dist == 0.1 %}selected{% endif %}>0.1 (Default)</option>
+      <option value="0.3" {% if result.min_dist == 0.3 %}selected{% endif %}>0.3 (More diffuse)</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s on {{ "{:,}".format(result.n_samples) }} samples</span>
+</form>
+
+<div class="card" style="border-top:3px solid #e11d48">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-globe card-icon" style="color:#e11d48"></i>
+      <h3>Uniform Manifold Approximation &amp; Projection (UMAP)</h3>
+    </div>
+    <span class="algo-tag badge-umap">🌌 UMAP</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      UMAP builds on Riemannian geometry and fuzzy simplicial sets. Unlike t-SNE, UMAP <strong>better preserves the global relationships</strong> between distant student groups while maintaining distinct local cluster structure.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>n_neighbors:</strong> {{ result.n_neighbors }}</span>
+      <span class="param-pill"><strong>min_dist:</strong> {{ result.min_dist }}</span>
+      <span class="param-pill"><strong>Samples Mapped:</strong> {{ "{:,}".format(result.n_samples) }}</span>
+      <span class="param-pill"><strong>Metric:</strong> Euclidean</span>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-braille card-icon"></i>
+      <h3>2D UMAP Manifold Projection</h3>
+    </div>
+    <span class="header-badge">Fuzzy Simplicial Projection</span>
+  </div>
+  <div class="card-body">
+    <div id="umap-scatter-plot" style="width:100%;height:450px"></div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const placed = pts.filter(p => p.placed === 'Placed' || p.placed === '1');
+  const unplaced = pts.filter(p => p.placed !== 'Placed' && p.placed !== '1');
+
+  Plotly.newPlot('umap-scatter-plot', [
+    {
+      x: placed.map(p => p.x),
+      y: placed.map(p => p.y),
+      mode: 'markers',
+      name: 'Placed Students',
+      marker: { color: '#16a34a', size: 6, opacity: 0.8 },
+      text: placed.map(p => `Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    },
+    {
+      x: unplaced.map(p => p.x),
+      y: unplaced.map(p => p.y),
+      mode: 'markers',
+      name: 'Unplaced Students',
+      marker: { color: '#ef4444', size: 6, opacity: 0.7 },
+      text: unplaced.map(p => `Not Placed<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    }
+  ], {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'UMAP Dimension 1', zeroline: false },
+    yaxis: { title: 'UMAP Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.15 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     7. ANOMALY DETECTION (ISOLATION FOREST)
+════════════════════════════════════════════════ -->
+{% if action == 'anomaly' and result %}
+
+<form method="GET" action="{{ url_for('unsupervised_learning') }}" class="param-control-bar">
+  <input type="hidden" name="action" value="anomaly">
+  <div class="param-control-group">
+    <label for="contam-select"><i class="fas fa-radiation" style="color:#dc2626"></i> Contamination Rate:</label>
+    <select name="contamination" id="contam-select">
+      <option value="0.02" {% if result.contamination == 0.02 %}selected{% endif %}>2% (Extreme Outliers Only)</option>
+      <option value="0.05" {% if result.contamination == 0.05 %}selected{% endif %}>5% (Recommended Standard)</option>
+      <option value="0.08" {% if result.contamination == 0.08 %}selected{% endif %}>8% (Sensitive)</option>
+      <option value="0.10" {% if result.contamination == 0.10 %}selected{% endif %}>10% (Wide Outlier Net)</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-play"></i> Recompute</button>
+  <span style="font-size:12px;color:var(--text-muted);margin-left:auto">Computed in {{ result.elapsed_sec }}s</span>
+</form>
+
+<div class="card" style="border-top:3px solid #dc2626">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-triangle-exclamation card-icon" style="color:#dc2626"></i>
+      <h3>Anomaly Detection — Isolation Forest</h3>
+    </div>
+    <span class="algo-tag badge-anomaly">🚨 Anomaly Detection</span>
+  </div>
+  <div class="card-body">
+    <div class="concept-box">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:6px"></i>
+      Isolation Forest isolates outliers by randomly selecting features and split values. <strong>Anomalous students require significantly fewer splits</strong> to isolate in tree branches because they reside in sparse multi-dimensional regions.
+    </div>
+    <div class="param-list">
+      <span class="param-pill"><strong>Contamination:</strong> {{ (result.contamination * 100) | round(1) }}%</span>
+      <span class="param-pill"><strong>Anomalies Detected:</strong> {{ "{:,}".format(result.n_anomalies) }}</span>
+      <span class="param-pill"><strong>Normal Students:</strong> {{ "{:,}".format(result.n_normal) }}</span>
+      <span class="param-pill"><strong>Method:</strong> Isolation Forest (100 Trees)</span>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat-card theme-red">
+    <div class="stat-info">
+      <span class="stat-label">Anomalies Detected</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_anomalies) }}</span>
+      <span class="stat-subtext">{{ result.anomaly_pct }}% of cohort</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-triangle-exclamation"></i></div>
+  </div>
+
+  <div class="stat-card theme-emerald">
+    <div class="stat-info">
+      <span class="stat-label">Inliers / Normal Cohort</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_normal) }}</span>
+      <span class="stat-subtext">Typical student patterns</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-circle-check"></i></div>
+  </div>
+
+  <div class="stat-card theme-amber">
+    <div class="stat-info">
+      <span class="stat-label">Contamination Setting</span>
+      <span class="stat-value">{{ (result.contamination * 100) | round }}%</span>
+      <span class="stat-subtext">Expected outlier proportion</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-sliders"></i></div>
+  </div>
+
+  <div class="stat-card theme-blue">
+    <div class="stat-info">
+      <span class="stat-label">Total Sampled</span>
+      <span class="stat-value">{{ "{:,}".format(result.n_samples) }}</span>
+      <span class="stat-subtext">Evaluated student records</span>
+    </div>
+    <div class="stat-icon-wrapper"><i class="fas fa-users"></i></div>
+  </div>
+</div>
+
+<!-- Scatter + Contrast Row -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+  
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-braille card-icon"></i>
+        <h3>Anomaly Spatial Projection</h3>
+      </div>
+      <span class="header-badge">Red = Anomalous</span>
+    </div>
+    <div class="card-body">
+      <div id="anomaly-scatter-plot" style="width:100%;height:380px"></div>
+    </div>
+  </div>
+
+  <!-- Normal vs Anomaly Profiles -->
+  <div class="card" style="margin-bottom:0">
+    <div class="card-header">
+      <div class="card-header-title">
+        <i class="fas fa-scale-balanced card-icon"></i>
+        <h3>Normal vs Anomaly Profile Contrast</h3>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature Metric</th>
+              <th>Normal Cohort</th>
+              <th>Anomalous Cohort</th>
+              <th>Divergence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mean CGPA</td>
+              <td><strong>{{ result.normal_profile.mean_cgpa }}</strong></td>
+              <td style="color:#dc2626"><strong>{{ result.anomaly_profile.mean_cgpa }}</strong></td>
+              <td>{{ (result.anomaly_profile.mean_cgpa - result.normal_profile.mean_cgpa) | round(2) }}</td>
+            </tr>
+            <tr>
+              <td>Attendance %</td>
+              <td>{{ result.normal_profile.mean_att }}%</td>
+              <td style="color:#dc2626">{{ result.anomaly_profile.mean_att }}%</td>
+              <td>{{ (result.anomaly_profile.mean_att - result.normal_profile.mean_att) | round(1) }}%</td>
+            </tr>
+            <tr>
+              <td>Coding Test Score</td>
+              <td>{{ result.normal_profile.mean_code }}</td>
+              <td style="color:#dc2626">{{ result.anomaly_profile.mean_code }}</td>
+              <td>{{ (result.anomaly_profile.mean_code - result.normal_profile.mean_code) | round(1) }}</td>
+            </tr>
+            <tr>
+              <td>Aptitude Test Score</td>
+              <td>{{ result.normal_profile.mean_apt }}</td>
+              <td style="color:#dc2626">{{ result.anomaly_profile.mean_apt }}</td>
+              <td>{{ (result.anomaly_profile.mean_apt - result.normal_profile.mean_apt) | round(1) }}</td>
+            </tr>
+            <tr>
+              <td>Backlogs Rate %</td>
+              <td>{{ result.normal_profile.backlog_rate }}%</td>
+              <td style="color:#dc2626"><strong>{{ result.anomaly_profile.backlog_rate }}%</strong></td>
+              <td>+{{ (result.anomaly_profile.backlog_rate - result.normal_profile.backlog_rate) | round(1) }}%</td>
+            </tr>
+            <tr>
+              <td>Placement Rate %</td>
+              <td><strong>{{ result.normal_profile.place_rate }}%</strong></td>
+              <td style="color:var(--accent)"><strong>{{ result.anomaly_profile.place_rate }}%</strong></td>
+              <td>{{ (result.anomaly_profile.place_rate - result.normal_profile.place_rate) | round(1) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Top Anomalies Table with Explanations -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>Top 10 Detected Anomalous Students &amp; Explanations</h3>
+    </div>
+    <span class="header-badge">Lowest Decision Scores</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Anomaly Score</th>
+            <th>CGPA</th>
+            <th>Attendance</th>
+            <th>Coding</th>
+            <th>Aptitude</th>
+            <th>Backlogs</th>
+            <th>Placement</th>
+            <th>Outlier Explanation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in result.top_anomalies %}
+          <tr>
+            <td><strong>{{ a.student_id }}</strong></td>
+            <td><span class="noise-tag">{{ a.score }}</span></td>
+            <td><strong>{{ a.cgpa }}</strong></td>
+            <td>{{ a.attendance }}%</td>
+            <td>{{ a.coding }}</td>
+            <td>{{ a.aptitude }}</td>
+            <td><span style="color:{% if a.backlogs == 'Yes' %}#dc2626{% else %}#16a34a{% endif %}">{{ a.backlogs }}</span></td>
+            <td><span class="persona-tag">{{ a.placement }}</span></td>
+            <td style="color:var(--text-secondary);font-size:12px"><i class="fas fa-circle-exclamation" style="color:#d97706;margin-right:4px"></i> {{ a.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const pts = {{ result.scatter_points | tojson }};
+  const normal = pts.filter(p => !p.is_anomaly);
+  const anom = pts.filter(p => p.is_anomaly);
+
+  Plotly.newPlot('anomaly-scatter-plot', [
+    {
+      x: normal.map(p => p.x),
+      y: normal.map(p => p.y),
+      mode: 'markers',
+      name: 'Normal Cohort',
+      marker: { color: '#2563eb', size: 6, opacity: 0.65 },
+      text: normal.map(p => `Normal<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    },
+    {
+      x: anom.map(p => p.x),
+      y: anom.map(p => p.y),
+      mode: 'markers',
+      name: 'Anomalous Cohort',
+      marker: { color: '#dc2626', size: 8, symbol: 'diamond', opacity: 0.9 },
+      text: anom.map(p => `Anomaly (Score: ${p.score})<br>CGPA: ${p.cgpa}`),
+      hoverinfo: 'text'
+    }
+  ], {
+    margin: { t: 30, b: 40, l: 45, r: 20 },
+    xaxis: { title: 'PCA Dimension 1', zeroline: false },
+    yaxis: { title: 'PCA Dimension 2', zeroline: false },
+    legend: { orientation: 'h', y: -0.15 },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: '#f8fafc'
+  }, { responsive: true, displayModeBar: false });
+});
+</script>
+
+{% endif %}
+
+
+<!-- ════════════════════════════════════════════════
+     8. SYNTHESIS & BENCHMARK COMPARISON
+════════════════════════════════════════════════ -->
+{% if action == 'compare' and result %}
+
+<div class="card" style="border-top:3px solid var(--purple)">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-layer-group card-icon"></i>
+      <h3>Unsupervised Learning Comparative Benchmarks</h3>
+    </div>
+    <span class="header-badge">Technique Synthesis</span>
+  </div>
+  <div class="card-body">
+    <div class="insight-bar">
+      <i class="fas fa-lightbulb" style="color:var(--amber);margin-right:8px"></i>
+      <strong>Unsupervised Learning Takeaway:</strong> Discovered student clusters naturally mirror placement employability tiers without seeing any outcome labels during training!
+    </div>
+  </div>
+</div>
+
+<!-- Clustering Methods Matrix -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-table card-icon"></i>
+      <h3>Clustering Algorithms Comparison</h3>
+    </div>
+    <span class="header-badge">K-Means vs Hierarchical vs DBSCAN</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Clusters Found</th>
+            <th>Silhouette Score</th>
+            <th>Time Complexity</th>
+            <th>Noise Handling</th>
+            <th>Cluster Geometry</th>
+            <th>Best Use Case</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in result.clustering_table %}
+          <tr>
+            <td><strong>{{ row.method }}</strong></td>
+            <td><span class="persona-tag">{{ row.clusters }}</span></td>
+            <td><strong>{{ row.silhouette }}</strong></td>
+            <td><code>{{ row.complexity }}</code></td>
+            <td style="font-size:12px">{{ row.noise_handling }}</td>
+            <td style="font-size:12px">{{ row.geometry }}</td>
+            <td style="font-size:12px;color:var(--text-secondary)">{{ row.best_for }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Dimensionality Reduction Methods Matrix -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-header-title">
+      <i class="fas fa-compress-arrows-alt card-icon"></i>
+      <h3>Dimensionality Reduction Comparison</h3>
+    </div>
+    <span class="header-badge">PCA vs t-SNE vs UMAP</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Technique</th>
+            <th>Transformation Type</th>
+            <th>Execution Speed</th>
+            <th>Structure Preserved</th>
+            <th>Interpretability</th>
+            <th>Key Application</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in result.reduction_table %}
+          <tr>
+            <td><strong>{{ row.method }}</strong></td>
+            <td><span class="param-pill">{{ row.type }}</span></td>
+            <td>{{ row.speed }}</td>
+            <td style="font-size:12px">{{ row.structure_preserved }}</td>
+            <td><strong>{{ row.interpretability }}</strong></td>
+            <td style="font-size:12px;color:var(--text-secondary)">{{ row.use_case }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

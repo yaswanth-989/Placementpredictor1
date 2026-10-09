@@ -15,6 +15,8 @@ import linear_regression as lr_module
 import decision_tree_module as dt_module
 import ensemble_models as ens_module
 import boosting_models as boost_module
+import unsupervised_learning as unsup_module
+import model_evaluation as me_module
 import predict as predict_module
 
 app = Flask(__name__)
@@ -395,6 +397,112 @@ def boosting_models():
         action = action,
         result = result,
         error  = error
+    )
+
+
+# ─────────────────────────────────────────
+# Unsupervised Learning
+# ─────────────────────────────────────────
+
+@app.route("/unsupervised-learning")
+def unsupervised_learning():
+    error = None
+    action = request.args.get("action", "kmeans")
+    result = None
+
+    # Query parameters
+    k = request.args.get("k", 3, type=int)
+    linkage = request.args.get("linkage", "ward")
+    eps = request.args.get("eps", 0.7, type=float)
+    min_samples = request.args.get("min_samples", 15, type=int)
+    perplexity = request.args.get("perplexity", 30, type=int)
+    n_neighbors = request.args.get("n_neighbors", 15, type=int)
+    min_dist = request.args.get("min_dist", 0.1, type=float)
+    contamination = request.args.get("contamination", 0.05, type=float)
+
+    try:
+        if action == "kmeans":
+            result = unsup_module.run_kmeans(k=k)
+        elif action == "hierarchical":
+            result = unsup_module.run_hierarchical(n_clusters=k, linkage=linkage)
+        elif action == "dbscan":
+            result = unsup_module.run_dbscan(eps=eps, min_samples=min_samples)
+        elif action == "pca":
+            result = unsup_module.run_pca()
+        elif action == "tsne":
+            result = unsup_module.run_tsne(perplexity=perplexity)
+        elif action == "umap":
+            result = unsup_module.run_umap(n_neighbors=n_neighbors, min_dist=min_dist)
+        elif action == "anomaly":
+            result = unsup_module.run_anomaly_detection(contamination=contamination)
+        elif action == "compare":
+            result = unsup_module.run_comparison()
+        else:
+            action = "kmeans"
+            result = unsup_module.run_kmeans(k=3)
+    except Exception as e:
+        error = f"Error evaluating {action}: {e}"
+
+    return render_template(
+        "unsupervised_learning.html",
+        active="unsupervised-learning",
+        action=action,
+        result=result,
+        error=error,
+        k=k,
+        linkage=linkage,
+        eps=eps,
+        min_samples=min_samples,
+        perplexity=perplexity,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        contamination=contamination
+    )
+
+
+# ─────────────────────────────────────────
+# Model Evaluation & Optimization
+# ─────────────────────────────────────────
+
+@app.route("/model-evaluation")
+def model_evaluation():
+    error = None
+    action = request.args.get("action", "splits")
+    result = None
+
+    # Query params
+    cv_folds = request.args.get("cv_folds", 5, type=int)
+    model_type = request.args.get("model_type", "rf")
+    reg_model_type = request.args.get("reg_model_type", "rf_reg")
+
+    try:
+        if action == "splits":
+            result = me_module.evaluate_splits(cv_folds=cv_folds)
+        elif action == "classification":
+            result = me_module.evaluate_classification(model_type=model_type)
+        elif action == "calibration":
+            result = me_module.evaluate_calibration()
+        elif action == "regression":
+            result = me_module.evaluate_regression(model_type=reg_model_type)
+        elif action == "tuning":
+            result = me_module.evaluate_tuning()
+        elif action == "summary":
+            result = me_module.evaluate_summary()
+        else:
+            action = "splits"
+            result = me_module.evaluate_splits(cv_folds=5)
+    except Exception as e:
+        error = f"Error evaluating {action}: {e}"
+
+    return render_template(
+        "model_evaluation.html",
+        active="model-evaluation",
+        action=action,
+        result=result,
+        error=error,
+        cv_folds=cv_folds,
+        model_type=model_type,
+        reg_model_type=reg_model_type
     )
 
 
