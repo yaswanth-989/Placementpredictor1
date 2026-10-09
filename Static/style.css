@@ -685,4 +685,61 @@ tr.winner-row th { font-weight:600; color:var(--accent); }
   border: 1px solid #fecaca;
 }
 
+/* ═══════════════════════════════════════════════
+   MODEL EVALUATION & TUNING STYLES
+═══════════════════════════════════════════════ */
+.badge-splits      { background:#ede9fe; color:#6d28d9; border:1px solid #ddd6fe; }
+.badge-metrics     { background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; }
+.badge-calibration { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+.badge-regression  { background:#fef3c7; color:#b45309; border:1px solid #fde68a; }
+.badge-tuning      { background:#fae8ff; color:#a21caf; border:1px solid #f5d0fe; }
+
+.cm-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+.cm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+.cm-box {
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cm-box-tp { background: #dcfce7; border: 1px solid #bbf7d0; color: #15803d; }
+.cm-box-tn { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.cm-box-fp { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+.cm-box-fn { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; }
+
+.cm-val { font-size: 24px; font-weight: 800; }
+.cm-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.cm-sub { font-size: 11px; opacity: 0.85; }
+
+.split-bar-visual {
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  overflow: hidden;
+  margin: 14px 0;
+  box-shadow: var(--shadow-xs);
+}
+.split-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+
 
