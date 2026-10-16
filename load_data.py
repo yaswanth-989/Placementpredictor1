@@ -2,10 +2,18 @@ import os
 import numpy as np
 import pandas as pd
 
+
 from pathlib import Path
+import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "data" / "placement_predict_50k Dataset.csv"
+DATA_PATH = BASE_DIR / "placement_predict_50k Dataset.csv"
+
+def load_data():
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Dataset not found at: {DATA_PATH}")
+
+    return pd.read_csv(DATA_PATH)
 
 # ─────────────────────────────────────────
 # Core loader
