@@ -1,0 +1,10 @@
+Flask==3.0.3
+Flask-Cors
+gunicorn
+numpy
+pandas
+scikit-learn
+scipy
+joblib
+matplotlib
+seaborn
