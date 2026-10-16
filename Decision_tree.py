@@ -7,9 +7,18 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import tree
 
 
+
+from pathlib import Path
+import pandas as pd
+
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR  / "data" / "placement_predict_50k Dataset.csv"
+
 def load_data():
-    df = pd.read_csv(r"D:\2-1 Odd sem\Machine Learning\Placementpredictor\placement_predict_50k Dataset.csv")
+    df = pd.read_csv(DATA_PATH)
     return df
+
+
 
 
 def prepare_data(df):

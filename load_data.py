@@ -2,8 +2,10 @@ import os
 import numpy as np
 import pandas as pd
 
-DATA_PATH = r"D:\2-1 Odd sem\Machine Learning\Placementpredictor\placement_predict_50k Dataset.csv"
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+DATA_PATH = BASE_DIR / "data" / "placement_predict_50k Dataset.csv"
 
 # ─────────────────────────────────────────
 # Core loader
